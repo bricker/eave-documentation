@@ -1,0 +1,64 @@
+{
+  "type": "record",
+  "name": "Avro",
+  "fields": [
+    {
+      "name": "event_name",
+      "type": "string"
+    },
+    {
+      "name": "event_description",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "name": "event_ts",
+      "type": "float"
+    },
+    {
+      "name": "event_source",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "name": "opaque_params",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "name": "eave_account_id",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "name": "eave_visitor_id",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "name": "eave_team_id",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "name": "eave_env",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "name": "opaque_eave_ctx",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "name": "eave_account",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "name": "eave_team",
+      "type": "string",
+      "default": ""
+    }
+  ]
+}
