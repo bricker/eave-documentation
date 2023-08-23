@@ -4,6 +4,7 @@ from eave.core.public.requests import connect_integration
 from eave.core.public.requests.atlassian_integration import AtlassianIntegration
 from eave.stdlib import cache
 from eave.stdlib.core_api.operations.account import GetAuthenticatedAccount, GetAuthenticatedAccountTeamIntegrations
+from eave.stdlib.core_api.operations.analytics_sessions import CreateAnalyticsSessionRequest
 from eave.stdlib.core_api.operations.documents import DeleteDocument, SearchDocuments, UpsertDocument
 from eave.stdlib.core_api.operations.atlassian import GetAtlassianInstallation
 from eave.stdlib.core_api.operations.github import GetGithubInstallation
@@ -216,6 +217,10 @@ routes = [
     make_route(
         config=GetAuthenticatedAccountTeamIntegrations.config,
         endpoint=authed_account.GetAuthedAccountTeamIntegrations,
+    ),
+    make_route(
+        config=CreateAnalyticsSessionRequest.config,
+        endpoint=analytics_sessions.GetAuthedAccountTeamIntegrations,
     ),
     # OAuth endpoints.
     # These endpoints don't require any verification (except the OAuth flow itself)

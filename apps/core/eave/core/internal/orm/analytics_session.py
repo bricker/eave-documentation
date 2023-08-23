@@ -26,6 +26,9 @@ class AnalyticsSessionOrm(Base):
         )
     )
 
+    # other possible properties:
+    # - device
+    #
     id: Mapped[UUID] = mapped_column(server_default=UUID_DEFAULT_EXPR)
     visitor_id: Mapped[Optional[UUID]] = mapped_column()
     account_id: Mapped[Optional[UUID]] = mapped_column()
