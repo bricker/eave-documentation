@@ -4,7 +4,7 @@ import uuid
 
 import aiohttp
 
-from eave.stdlib.cookies import ResponseCookieMutator, delete_http_cookie, set_http_cookie
+from eave.stdlib.cookies import ResponseCookieMutator, delete_http_cookie, http_cookie, set_http_cookie
 
 _EAVE_ACCOUNT_ID_COOKIE = "ev_account_id"
 _EAVE_TEAM_ID_COOKIE = "ev_team_id"
@@ -36,6 +36,31 @@ def _forward_response_auth_cookie(
             set_http_cookie(key=key, value=m.value, response=to_client)
         else:
             delete_http_cookie(key=key, response=to_client)
+
+def auth_cookies(
+    response: ResponseCookieMutator,
+    account_id: Optional[uuid.UUID | str],
+    team_id: Optional[uuid.UUID | str],
+    access_token: Optional[str],
+) -> list[str]:
+    cookie_vals: list[str] = []
+
+    if account_id:
+        v = set_http_cookie()
+        cookie_vals.append
+        set_http_cookie(key=_EAVE_ACCOUNT_ID_COOKIE, value=str(account_id), response=response)
+    else:
+        delete_http_cookie(response=response, key=_EAVE_ACCOUNT_ID_COOKIE)
+
+    if team_id:
+        set_http_cookie(key=_EAVE_TEAM_ID_COOKIE, value=str(team_id), response=response)
+    else:
+        delete_http_cookie(response=response, key=_EAVE_TEAM_ID_COOKIE)
+
+    if access_token:
+        set_http_cookie(key=_EAVE_ACCESS_TOKEN_COOKIE, value=access_token, response=response)
+    else:
+        delete_http_cookie(response=response, key=_EAVE_ACCESS_TOKEN_COOKIE)
 
 def set_auth_cookies(
     response: ResponseCookieMutator,

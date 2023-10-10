@@ -1,6 +1,7 @@
+import http.cookies
 import typing
 from datetime import datetime
-from typing import Any, Literal, Protocol
+from typing import Any, Literal, Optional, Protocol
 
 
 from .config import shared_config
@@ -27,6 +28,31 @@ class ResponseCookieMutator(Protocol):
     ) -> Any:
         ...
 
+def http_cookie(
+    key: str,
+    value: str,
+    max_age: Optional[int] = None,
+    expires: Optional[int] = None,
+    httponly: bool = True
+) -> str:
+    cookie = http.cookies.SimpleCookie()
+    cookie[key] = value
+
+    if max_age is not None:
+        cookie[key]["max-age"] = max_age
+    if expires is not None:
+        cookie[key]["expires"] = expires
+
+    cookie[key]["domain"] = shared_config.eave_cookie_domain
+
+    if not shared_config.is_development:
+        cookie[key]["secure"] = True
+
+    if httponly:
+        cookie[key]["httponly"] = True
+
+    cookie_val = cookie.output(header="").strip()
+    return cookie_val
 
 def set_http_cookie(key: str, value: str, response: ResponseCookieMutator, httponly: bool = True) -> None:
     response.set_cookie(

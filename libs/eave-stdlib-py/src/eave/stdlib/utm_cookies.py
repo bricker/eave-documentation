@@ -45,7 +45,6 @@ def set_tracking_cookies(
     """
     if (cookie_value := cookies.get(EAVE_VISITOR_ID_COOKIE)) is None or len(cookie_value) == 0:
         set_http_cookie(key=EAVE_VISITOR_ID_COOKIE, value=str(uuid.uuid4()), response=response, httponly=False)
-
     for key, value in query_params.items():
         lkey = key.lower()
         if lkey in _KNOWN_TRACKING_PARAMS or re.match("^utm_", lkey):

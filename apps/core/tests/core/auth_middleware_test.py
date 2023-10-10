@@ -69,7 +69,7 @@ class TestAuthenticationMiddlewareRequired(TestAuthenticationMiddlewareBase):
         )
 
         assert response.status_code == HTTPStatus.UNAUTHORIZED
-        assert response.cookies["ev_account_id"] == ""
+        assert response.cookies.get("ev_account_id") == ""
         assert response.cookies["ev_access_token"] == ""
         assert response.cookies["ev_team_id"] == ""
 
