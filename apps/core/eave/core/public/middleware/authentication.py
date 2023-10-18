@@ -36,7 +36,12 @@ class AuthASGIMiddleware(EaveASGIMiddleware):
             return
 
         if development_bypass_allowed(scope=scope):
-            await development_bypass_auth(scope=scope)
+            try:
+                await development_bypass_auth(scope=scope)
+            except Exception:
+                if self.endpoint_config.auth_required:
+                    raise
+
             await self.app(scope, receive, send)
             return
 
