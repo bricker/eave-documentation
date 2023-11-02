@@ -25,4 +25,11 @@ fragment repoFragment on Repository {
     id
     name
   }
+
+  languages(first: 100) {
+    nodes {
+      __typename
+      name
+    }
+  }
 }

@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import yargs from "yargs/yargs";
 import { LogContext } from "@eave-fyi/eave-stdlib-ts/src/logging.js";
 import assert from "assert";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -10,22 +11,20 @@ import { GithubAPIData } from "../../src/lib/api-documentation/github-api.js";
 import { createOctokitClient } from "../../src/lib/octokit-util.js";
 import { generateExpressAPIDoc } from "../../src/tasks/run-api-documentation.js";
 import { compileQuery, graphql } from "../../src/lib/graphql-util.js";
+import { GetGithubReposOperation } from "@eave-fyi/eave-stdlib-ts/src/core-api/operations/github-repos.js";
 
 loadStandardDotenvFiles();
 
-const externalRepoId = process.env["__EXTERNAL_REPO_ID"]!;
-const teamId = process.env["__EAVE_TEAM_ID"]!;
-const installationId = process.env["__INSTALLATION_ID"]!;
+function log(k: string, o: any) {
+  console.log(`\n=== ${k} ===`);
+  console.dir(o, { depth: null, sorted: true, colors: true });
+  console.log("===\n");
+}
 
-assert(externalRepoId, "__EXTERNAL_REPO_ID is required");
-assert(teamId, "__EAVE_TEAM_ID is required");
-assert(installationId, "__INSTALLATION_ID is required");
+const ctx = new LogContext();
 
-async function generateAPIDocs() {
-  const octokit = await createOctokitClient(parseInt(installationId, 10));
-
-  const ctx = new LogContext();
-
+async function generateAPIDocs({ installId, teamId, externalRepoId }) {
+  const octokit = await createOctokitClient(parseInt(installId, 10));
   const githubAPIData = new GithubAPIData({
     ctx,
     octokit,
@@ -39,10 +38,10 @@ async function generateAPIDocs() {
   });
 
   const externalGithubRepo = await githubAPIData.getExternalGithubRepo();
-  console.log("externalGithubRepo", externalGithubRepo);
+  log("externalGithubRepo", externalGithubRepo);
 
   const expressRootDirs = await githubAPIData.getExpressRootDirs();
-  console.log("expressRootDirs", expressRootDirs);
+  log("expressRootDirs", expressRootDirs);
 
   await Promise.all(
     expressRootDirs.map(async (apiRootDir) => {
@@ -53,21 +52,19 @@ async function generateAPIDocs() {
         ctx,
       });
 
-      console.log(expressAPIInfo);
+      log("expressAPIInfo", expressAPIInfo);
 
       const newDocumentContents = await generateExpressAPIDoc({
         expressAPIInfo,
         ctx,
       });
-      console.log(newDocumentContents);
+      log("newDocumentContents", newDocumentContents);
     }),
   );
 }
 
-async function getPullRequestFiles() {
-  const octokit = await createOctokitClient(parseInt(installationId, 10));
-  const ctx = new LogContext();
-
+async function getPullRequestFiles({ installId, teamId, externalRepoId }) {
+  const octokit = await createOctokitClient(parseInt(installId, 10));
   const githubAPIData = new GithubAPIData({
     ctx,
     octokit,
@@ -135,5 +132,37 @@ async function getPullRequestFiles() {
   }
 }
 
-// void generateAPIDocs();
-// void main();
+
+async function getRepoContents({ installId, externalRepoId }) {
+  const octokit = await createOctokitClient(parseInt(installId, 10));
+  const githubAPIData = new GithubAPIData({
+    ctx,
+    octokit,
+    externalRepoId,
+  });
+
+  const externalGithubRepo = await githubAPIData.getExternalGithubRepo();
+  log("externalGithubRepo", externalGithubRepo);
+
+  const expressRootDirs = await githubAPIData.getExpressRootDirs();
+  log("expressRootDirs", expressRootDirs);
+}
+
+const argv = yargs(process.argv.slice(2)).argv;
+console.table(argv);
+
+const op = argv["op"];
+
+switch (op) {
+  case "getRepoContents":
+    void getRepoContents(argv);
+    break;
+  case "generateAPIDocs":
+    void generateAPIDocs(argv);
+    break;
+  case "getPullRequestFiles":
+    void getPullRequestFiles(argv);
+    break;
+  default:
+    throw new Error("Invalid op");
+}

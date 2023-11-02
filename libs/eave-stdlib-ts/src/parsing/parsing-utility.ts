@@ -1,6 +1,6 @@
 import nodePath from "node:path";
 import Parser from "tree-sitter";
-import { grammarForFilePathOrName } from "../parsing/grammars.js";
+import { grammarForFilePathOrName } from "./grammars.js";
 import {
   ProgrammingLanguage,
   getProgrammingLanguageByFilePathOrName,
@@ -10,7 +10,7 @@ import { normalizeExtName } from "../util.js";
 
 export class CodeFile {
   contents: string;
-  path: string;
+  readonly path: string;
   private __memo_tree__?: Parser.Tree;
 
   constructor({ path, contents }: { path: string; contents: string }) {
@@ -45,27 +45,9 @@ export class CodeFile {
     return nodePath.dirname(this.path);
   }
 
-  // set dirname(newValue: string) {
-  //   const p = nodePath.parse(this.path);
-  //   p.dir = newValue;
-
-  //   const newPath = nodePath.format(p);
-  //   this.path = newPath;
-  // }
-
   get extname(): string {
     return nodePath.extname(this.path);
   }
-
-  // set extname(newValue: string) {
-  //   newValue = normalizeExtName(newValue);
-  //   const p = nodePath.parse(this.path);
-  //   p.base = ""; // node ignores p.ext and p.name if p.base is provided
-  //   p.ext = newValue;
-
-  //   const newPath = nodePath.format(p);
-  //   this.path = newPath;
-  // }
 }
 
 export function parseCode({

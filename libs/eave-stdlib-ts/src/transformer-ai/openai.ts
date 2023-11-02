@@ -10,7 +10,7 @@ import { logGptRequest } from "../analytics.js";
 import { sharedConfig } from "../config.js";
 import { LogContext, eaveLogger } from "../logging.js";
 import { CtxArg } from "../requests.js";
-import { redact } from "../util.js";
+import { dedent, redact } from "../util.js";
 import { modelFromString } from "./models.js";
 import * as costCounter from "./token-counter.js";
 
@@ -21,38 +21,7 @@ export const PROMPT_PREFIX =
   "You are responsible for the quality and integrity of this organization's documentation.";
 
 export function formatprompt(...prompts: string[]): string {
-  const prompt: string[] = [];
-  for (const s of prompts) {
-    let chunks = s.split("\n");
-    if (chunks.length <= 1) {
-      // not a multiline string; nothing to dedent
-      prompt.push(s);
-      continue;
-    }
-
-    const commonLeadingWhitespaceLength = chunks.reduce((len, line) => {
-      // Ignore empty lines
-      if (line.trim() === "") {
-        return len;
-      }
-
-      const m = line.match(/^\s*/);
-      // 'm' will never be null, because every string will match the regex. This check is for the typechecker.
-      if (m && m[0].length < len) {
-        len = m[0].length;
-      }
-      return len;
-    }, Infinity);
-
-    if (commonLeadingWhitespaceLength === Infinity) {
-      prompt.push(s);
-      continue;
-    }
-
-    chunks = chunks.map((line) => line.slice(commonLeadingWhitespaceLength));
-    prompt.push(chunks.join("\n"));
-  }
-  return prompt.join("\n");
+  return prompts.map((p) => dedent(p)).join("\n");
 }
 
 export default class OpenAIClient {

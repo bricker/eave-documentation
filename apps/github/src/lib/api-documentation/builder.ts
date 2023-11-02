@@ -14,7 +14,10 @@ import { assertPresence } from "@eave-fyi/eave-stdlib-ts/src/util.js";
 import { assertIsBlob } from "../graphql-util.js";
 import { CoreAPIData } from "./core-api.js";
 import { GithubAPIData } from "./github-api.js";
+import { getImportSearchPaths, resolveImportLookupPaths } from "@eave-fyi/eave-stdlib-ts/src/api-documenting/es-parsing-utility.js";
+import { Blob } from "@octokit/graphql-schema";
 
+type
 export class ExpressAPIDocumentBuilder {
   readonly logParams: { [key: string]: JsonValue };
   private readonly githubAPIData: GithubAPIData;
@@ -170,7 +173,7 @@ export class ExpressAPIDocumentBuilder {
       this.apiRootFile.tree.rootNode.descendantsOfType("call_expression");
     const requires = await this.buildLocalRequires();
     const imports = await this.buildLocalImports();
-    const declarations = this.apiRootFile.getDeclarationMap();
+    const declarations = this.apiRootFile.exportedDeclarations();
     const { app = "", router = "" } =
       await this.apiRootFile.getExpressAppIdentifiers();
     const apiEndpoints: Array<string> = [];
@@ -194,7 +197,7 @@ export class ExpressAPIDocumentBuilder {
       });
       if (isRouteCall) {
         endpointCode += `${call.text}\n`;
-        const nestedIdentifiers = this.apiRootFile.getUniqueIdentifiers({
+        const nestedIdentifiers = this.apiRootFile.getUniqueIdentifierReferences({
           rootNode: call,
           exclusions: [app, router],
         });
@@ -238,10 +241,13 @@ export class ExpressAPIDocumentBuilder {
     identifier,
     expressCodeFile,
   }: {
-    identifier: string;
+    identifier?: string;
     expressCodeFile: ExpressCodeFile;
   }): Promise<string> {
-    const declarations = expressCodeFile.getDeclarationMap();
+    if (!identifier) {
+      // We're not looking for a specific identifier, so we'll
+    }
+    const declarations = expressCodeFile.exportedDeclarations();
     const declaration = declarations.get(identifier);
 
     let accumulator = "";
@@ -249,9 +255,9 @@ export class ExpressAPIDocumentBuilder {
     // Case 2: The given identifier is declared in the given file.
     if (declaration) {
       accumulator += `${declaration.text}\n\n`;
-      const importPaths = expressCodeFile.getLocalImportPaths();
-      const requirePaths = expressCodeFile.getLocalRequirePaths();
-      const innerIdentifiers = expressCodeFile.getUniqueIdentifiers({
+      const imports = expressCodeFile.getLocalImportPaths();
+      const requires = expressCodeFile.getLocalRequirePaths();
+      const innerIdentifiers = expressCodeFile.getUniqueIdentifierReferences({
         rootNode: declaration,
         exclusions: [identifier],
       });
@@ -265,28 +271,34 @@ export class ExpressAPIDocumentBuilder {
           accumulator += `${innerDeclaration.text}\n\n`;
           continue;
         }
-        const importPath = importPaths.get(innerIdentifier);
+        const importPath = imports.get(innerIdentifier);
         if (importPath) {
           const importedFile = await this.getExpressCodeFile({
             filePath: importPath,
           });
-          const c = await this.concatenateImports({
-            identifier: innerIdentifier,
-            expressCodeFile: importedFile,
-          });
-          accumulator += c;
+          if (importedFile) {
+            const c = await this.concatenateImports({
+              identifier: innerIdentifier,
+              expressCodeFile: importedFile,
+            });
+            accumulator += c;
+          }
           continue;
         }
-        const requirePath = requirePaths.get(innerIdentifier);
-        if (requirePath) {
-          const importedFile = await this.getExpressCodeFile({
-            filePath: requirePath,
-          });
-          const c = await this.concatenateImports({
-            identifier: innerIdentifier,
-            expressCodeFile: importedFile,
-          });
-          accumulator += c;
+        const requireLookupPaths = requires.get(innerIdentifier);
+        if (requireLookupPaths) {
+          for (const importPath of requireLookupPaths) {
+            const importedFile = await this.getExpressCodeFile({
+              filePath: importPath,
+            });
+            if (importedFile) {
+              const c = await this.concatenateImports({
+                identifier: innerIdentifier,
+                expressCodeFile: importedFile,
+              });
+              accumulator += c;
+            }
+          }
         }
       }
       return accumulator;
@@ -319,9 +331,9 @@ export class ExpressAPIDocumentBuilder {
    * @returns {Promise<Map<string, string>>} A promise that resolves to a map of identifiers to import codes.
    */
   private async buildLocalImports(): Promise<Map<string, string>> {
-    const importPaths = this.apiRootFile.getLocalImportPaths();
-    const imports = new Map();
-    for (const [identifier, importPath] of importPaths) {
+    const imports = this.apiRootFile.getLocalImportPaths();
+    const importedCode = new Map<string, string>();
+    for (const [identifier, importPath] of imports) {
       const expressCodeFile = await this.getExpressCodeFile({
         filePath: importPath,
       });
@@ -329,9 +341,9 @@ export class ExpressAPIDocumentBuilder {
         identifier,
         expressCodeFile,
       });
-      imports.set(identifier, importCode);
+      importedCode.set(identifier, importCode);
     }
-    return imports;
+    return importedCode;
   }
 
   /**
@@ -344,19 +356,25 @@ export class ExpressAPIDocumentBuilder {
    * @private
    */
   private async buildLocalRequires(): Promise<Map<string, string>> {
-    const requirePaths = this.apiRootFile.getLocalRequirePaths();
-    const requires = new Map();
-    for (const [identifier, requirePath] of requirePaths) {
-      const expressCodeFile = await this.getExpressCodeFile({
-        filePath: requirePath,
-      });
-      const requireCode = await this.concatenateImports({
-        identifier,
-        expressCodeFile,
-      });
-      requires.set(identifier, requireCode);
+    const requires = this.apiRootFile.getLocalRequirePaths();
+    const importedCode = new Map();
+
+    for (const [identifier, requireLookupPaths] of requires) {
+      for (const requireLookupPath of requireLookupPaths) {
+        const expressCodeFile = await this.getExpressCodeFile({
+          filePath: requireLookupPath,
+        });
+        if (expressCodeFile) {
+          const requireCode = await this.concatenateImports({
+            identifier,
+            expressCodeFile,
+          });
+          importedCode.set(identifier, requireCode);
+        }
+      }
     }
-    return requires;
+
+    return importedCode;
   }
 
   /**
@@ -372,27 +390,37 @@ export class ExpressAPIDocumentBuilder {
     filePath,
   }: {
     filePath: string;
-  }): Promise<ExpressCodeFile> {
-    let file = new ExpressCodeFile({ path: filePath, contents: "" }); // empty contents as placeholder
+  }): Promise<ExpressCodeFile | null> {
+    const file = new ExpressCodeFile({ path: filePath, contents: "" }); // empty contents as placeholder
+    const searchPaths = getImportSearchPaths({ importPath: filePath })
 
-    let gitBlob = await this.githubAPIData.getFileContent({ filePath });
+    let gitBlob: Blob | undefined;
+    for (const searchPath of searchPaths) {
+      const blob = await this.githubAPIData.getFileContent({ filePath: searchPath });
 
-    if (!gitBlob && file.language === ProgrammingLanguage.javascript) {
-      // either the file doesn't exist, or this is a javascript import and the source file is typescript.
-      const tsFilePath = changeFileExtension({
-        filePathOrName: filePath,
-        to: ".ts",
-      });
-      file = new ExpressCodeFile({ path: tsFilePath, contents: "" }); // empty contents as placeholder
-      gitBlob = await this.githubAPIData.getFileContent({
-        filePath: tsFilePath,
-      });
+      // Because we try a bunch of possible files, it's normal for the file not to exist.
+      // In that case, we'll try the next file.
+      // If the file existed, then we'll use that and stop looking.
+      if (blob) {
+        gitBlob = blob;
+        break;
+      }
     }
 
-    if (!gitBlob?.text) {
+    if (!gitBlob) {
+      eaveLogger.warning(
+        "getExpressCodeFile - no file found for import",
+        { file_path: filePath, file: file.asJSON, search_paths: searchPaths },
+        this.logParams,
+        this.ctx,
+      );
+      return null;
+    }
+
+    if (!gitBlob.text) {
       eaveLogger.warning(
         "getExpressCodeFile - empty file contents",
-        { file_path: filePath, file: file.asJSON },
+        { file_path: filePath, file: file.asJSON, search_paths: searchPaths },
         this.logParams,
         this.ctx,
       );

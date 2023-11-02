@@ -1196,7 +1196,7 @@ classMyClass {
 }
 
 export function baz(): string {
-  return HAHWWHAW!!!!??? 
+  return HAHWWHAW!!!!???
 }
 
 // the following is actually ok with tree-sitter T.T
@@ -1231,21 +1231,21 @@ test("assertValidSyntax does not throw on syntactically correct content", async 
   const filePath = "src/file.ts";
   const language = ProgrammingLanguage.typescript;
   const content = `import { appConfig } from './src/config.js';
-  
+
   function foo() {
     console.log('foo');
   }
-  
+
   class MyClass {
     bar(): string {
       return "bar";
     }
   }
-  
+
   export function baz(): string {
     return "baz";
   }
-  
+
   /**
    * Doc comment
    * @param to be replaced

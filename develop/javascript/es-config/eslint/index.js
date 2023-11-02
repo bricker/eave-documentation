@@ -68,12 +68,9 @@ const config = {
       "error",
       {
         functions: false,
-        classes: false,
-        variables: true,
       },
     ],
 
-    // Rules enabled by default that I don't like
     "import/prefer-default-export": "off",
     "import/order": "off", // prettier handles this
   },

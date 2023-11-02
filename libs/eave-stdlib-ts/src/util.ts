@@ -63,3 +63,33 @@ export function titleize(str: string) {
 export function underscoreify(str: string) {
   return str.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
 }
+
+export function dedent(s: string): string {
+  let chunks = s.split("\n");
+  if (chunks.length <= 1) {
+    // not a multiline string; nothing to dedent
+    return s;
+  }
+
+  const commonLeadingWhitespaceLength = chunks.reduce((len, line) => {
+    // Ignore empty lines
+    if (line.trim().length === 0) {
+      return len;
+    }
+
+    const m = line.match(/^\s*/);
+    const lws = m![0].length;
+    if (lws < len) {
+      len = lws;
+    }
+    return len;
+  }, Infinity);
+
+  if (commonLeadingWhitespaceLength === Infinity) {
+    // Common whitespace couldn't be determined; return the original string.
+    return s;
+  }
+
+  chunks = chunks.map((line) => line.slice(commonLeadingWhitespaceLength));
+  return chunks.join("\n");
+}

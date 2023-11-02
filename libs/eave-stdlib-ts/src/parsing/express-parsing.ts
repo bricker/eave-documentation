@@ -2,7 +2,7 @@ import path from "node:path";
 import Parser from "tree-sitter";
 import { ExpressRoutingMethod, JsonObject } from "../types.js";
 import { titleize } from "../util.js";
-import { ESCodeFile } from "./es-parsing-utility.js";
+import { ESCodeFile } from "./es-parsing.js";
 
 type ExpressIdentifiers = {
   app?: string;
@@ -23,7 +23,7 @@ export class ExpressCodeFile extends ESCodeFile {
       return false;
     }
 
-    const variables = this.getVariableMap();
+    const variables = this.variables();
 
     for (const expressionNode of variables.values()) {
       const children = this.getNodeChildMap({ node: expressionNode });
@@ -79,7 +79,7 @@ export class ExpressCodeFile extends ESCodeFile {
       return this.__memo_expressAppIdentifiers__;
     }
 
-    const variables = this.getVariableMap();
+    const variables = this.variables();
     const identifiers: ExpressIdentifiers = {};
 
     for (const [identifier, expressionNode] of variables) {
