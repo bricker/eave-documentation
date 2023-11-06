@@ -1,8 +1,8 @@
 import {
   ExpressAPI,
   ExpressCodeFile,
-} from "@eave-fyi/eave-stdlib-ts/src/api-documenting/express-parsing-utility.js";
-import { changeFileExtension } from "@eave-fyi/eave-stdlib-ts/src/api-documenting/parsing-utility.js";
+} from "@eave-fyi/eave-stdlib-ts/src/parsing/express-parsing.js";
+import { changeFileExtension } from "@eave-fyi/eave-stdlib-ts/src/parsing/parsing-utility.js";
 import {
   LogContext,
   eaveLogger,
@@ -14,10 +14,9 @@ import { assertPresence } from "@eave-fyi/eave-stdlib-ts/src/util.js";
 import { assertIsBlob } from "../graphql-util.js";
 import { CoreAPIData } from "./core-api.js";
 import { GithubAPIData } from "./github-api.js";
-import { getImportSearchPaths, resolveImportLookupPaths } from "@eave-fyi/eave-stdlib-ts/src/api-documenting/es-parsing-utility.js";
+import { getImportSearchPaths, resolveImportLookupPaths } from "@eave-fyi/eave-stdlib-ts/src/parsing/es-parsing.js";
 import { Blob } from "@octokit/graphql-schema";
 
-type
 export class ExpressAPIDocumentBuilder {
   readonly logParams: { [key: string]: JsonValue };
   private readonly githubAPIData: GithubAPIData;
@@ -73,7 +72,7 @@ export class ExpressAPIDocumentBuilder {
         path: treeEntry.path,
         contents: blob.text,
       });
-      if (file.testExpressRootFile()) {
+      if (file.isExpressRootFile()) {
         // We found the file; Early-exit the loop
         apiInfo.rootFile = file;
         break;
@@ -175,7 +174,7 @@ export class ExpressAPIDocumentBuilder {
     const imports = await this.buildLocalImports();
     const declarations = this.apiRootFile.exportedDeclarations();
     const { app = "", router = "" } =
-      await this.apiRootFile.getExpressAppIdentifiers();
+      await this.apiRootFile.expressAppIdentifiers();
     const apiEndpoints: Array<string> = [];
 
     let baseCode = `import express from 'express';\nconst ${app} = express();\n`;

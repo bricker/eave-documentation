@@ -1,5 +1,5 @@
 import { logEvent } from "@eave-fyi/eave-stdlib-ts/src/analytics.js";
-import { ExpressAPI } from "@eave-fyi/eave-stdlib-ts/src/api-documenting/express-parsing-utility.js";
+import { ExpressAPI } from "@eave-fyi/eave-stdlib-ts/src/parsing/express-parsing.js";
 import {
   GithubDocumentValuesInput,
   Status,

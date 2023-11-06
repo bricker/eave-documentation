@@ -13,27 +13,46 @@ export enum ESNodeType {
   call_expression = "call_expression",
   import_statement = "import_statement",
   import_clause = "import_clause",
-  declaration = "declaration",
+  class_declaration = "class_declaration",
+  function_declaration = "function_declaration",
+  generator_function_declaration = "generator_function_declaration",
+  lexical_declaration = "lexical_declaration",
+  variable_declaration = "variable_declaration",
   export_statement = "export_statement",
   member_expression = "member_expression",
   string = "string",
   arguments = "arguments",
 }
 
+/**
+ * Wrapper around Parser.SyntaxNode with some ES-specific logic built-in
+ */
 export class ESNode {
   readonly innerNode: Parser.SyntaxNode;
-  readonly identifier?: string;
+  private __memo_identifier__?: string;
   private __memo_variableMap__?: Map<string, ESNode>;
   private __memo_declarationMap__?: Map<string, ESNode>;
   private __memo_localImportPaths__?: Map<string, string>;
 
   constructor({ node }: { node: Parser.SyntaxNode }) {
     this.innerNode = node;
-    this.identifier = node.children.find((child) => child.type === ESNodeType.identifier)?.text;
+  }
+
+  get identifier(): string | undefined {
+    if (this.__memo_identifier__ !== undefined) {
+      return this.__memo_identifier__;
+    }
+
+    this.__memo_identifier__ = this.firstChildOfType(ESNodeType.identifier)?.text;
+    return this.__memo_identifier__;
   }
 
   get type(): string {
     return this.innerNode.type;
+  }
+
+  get text(): string {
+    return this.innerNode.text;
   }
 
   /**
@@ -45,15 +64,13 @@ export class ESNode {
       return this.__memo_variableMap__;
     }
 
-    const variableNodes = this.innerNode.descendantsOfType(ESNodeType.variable_declarator);
+    const variableNodes = this.childrenOfType(ESNodeType.variable_declarator);
     const variables = new Map<string, ESNode>();
     for (const node of variableNodes) {
-      const esNode = new ESNode({ node });
-      const identifierNode = esNode.identifier;
-      const expressionNode = node.descendantsOfType(ESNodeType.call_expression).at(-1);
+      const expressionNode = node.firstChildOfType(ESNodeType.call_expression);
 
-      if (identifierNode && expressionNode) {
-        variables.set(identifierNode.text, new ESNode({ node: expressionNode }));
+      if (node.identifier && expressionNode) {
+        variables.set(node.identifier, expressionNode);
       }
     }
     this.__memo_variableMap__ = variables;
@@ -71,13 +88,12 @@ export class ESNode {
     }
 
     // Find import statements (ES modules)
-    const importNodes =
-      this.innerNode.descendantsOfType(ESNodeType.import_statement);
+    const importNodes = this.childrenOfType(ESNodeType.import_statement);
     const importPaths = new Map<string, string>();
 
     for (const importNode of importNodes) {
-      const importClause = importNode.children.find((child) => child.type === ESNodeType.import_clause)[0];
-      const importPath = importNode.descendantsOfType(ESNodeType.string)[0]?.text;
+      const importClause = importNode.firstChildOfType(ESNodeType.import_clause);
+      const importPath = importNode.firstChildOfType(ESNodeType.string)?.text;
 
       if (importClause && importPath) {
         // TODO: Handle renamed imports (eg: `import path as NodePath from "node:path"`)
@@ -95,13 +111,13 @@ export class ESNode {
 
     // Find require statements (Common JS)
     for (const [identifier, node] of this.variables) {
-      const expressionNode = node.descendantsOfType(ESNodeType.call_expression)[0];
+      const expressionNode = node.firstChildOfType(ESNodeType.call_expression);
 
       if (expressionNode) {
-        const expressionNodeIdentifier = expressionNode?.descendantsOfType(ESNodeType.identifier)[0];
+        const expressionNodeIdentifier = expressionNode?.firstChildOfType(ESNodeType.identifier);
         if (expressionNodeIdentifier?.text === "require") {
-          const args = expressionNode.descendantsOfType(ESNodeType.arguments)[0];
-          const importPath = args?.firstNamedChild?.text;
+          const args = expressionNode.firstChildOfType(ESNodeType.arguments);
+          const importPath = args?.innerNode.firstNamedChild?.text;
           if (importPath) {
             importPaths.set(identifier, importPath);
           }
@@ -125,19 +141,43 @@ export class ESNode {
       return this.__memo_declarationMap__;
     }
 
-    const declarations = new Map<string, Parser.SyntaxNode>();
-    for (const node of this.innerNode.namedChildren) {
-      const esNode = new ESNode({ node })
-      if (node.type.includes(ESNodeType.declaration)) {
-        // TODO: Handle anonymous declarations
-        if (esNode.identifier) {
-          declarations.set(esNode.identifier, esNode);
-        }
-      }
-    }
+    const declarations = this.childrenOfType([
+      ESNodeType.class_declaration,
+      ESNodeType.function_declaration,
+      ESNodeType.generator_function_declaration,
+      ESNodeType.lexical_declaration,
+      ESNodeType.variable_declaration,
+    ]);
 
-    this.__memo_declarationMap__ = declarations;
+    const declarationsMap = declarations.reduce((acc, node) => {
+      // TODO: Handle anonymous declarations
+      if (node.identifier) {
+        acc.set(node.identifier, node);
+      }
+      return acc;
+    }, new Map<string, ESNode>());
+
+    this.__memo_declarationMap__ = declarationsMap;
     return this.__memo_declarationMap__;
+  }
+
+  childrenOfType(types: string | string[]): ESNode[] {
+    const typesArr = Array.isArray(types) ? types : [types];
+
+    return this.innerNode.namedChildren
+      .filter((node) => typesArr.includes(node.type))
+      .map((node) => new ESNode({ node }));
+  }
+
+  firstChildOfType(types: string | string[]): ESNode | null {
+    const typesArr = Array.isArray(types) ? types : [types];
+
+    const child = this.innerNode.namedChildren.find((node) => typesArr.includes(node.type));
+    if (child) {
+      return new ESNode({ node: child });
+    } else {
+      return null;
+    }
   }
 
   /**
@@ -201,7 +241,7 @@ export class ESCodeFile extends CodeFile {
   }
 }
 
-function getImportSearchPaths({ importPath }: { importPath: string }): string[] {
+export function getImportSearchPaths({ importPath }: { importPath: string }): string[] {
   const searchPaths: string[] = [];
   searchPaths.push(importPath);
 

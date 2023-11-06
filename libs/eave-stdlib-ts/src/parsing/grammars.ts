@@ -21,13 +21,16 @@ import {
 } from "../programming-langs/language-mapping.js";
 import { xor } from "../util.js";
 
+// Just for readability.
+export type TreeSitterGrammar = any;
+
 const { typescript: Typescript, tsx } = tsPkg;
 
 /**
  * Return a tree-sitter grammar corresponding to the programming language
  * `language`.
  * Returns null if there is no grammar found corresponding to `language`, or
- * if the specific `extName` is explicitely unsupported.
+ * if the specific `extName` is explicitly unsupported.
  *
  * @param language programming language of source code file.
  * @param extName file extension of the source code file. Expected to contain . prefix (e.g. ".js").
@@ -42,7 +45,7 @@ export function grammarForLanguage({
   language: string | ProgrammingLanguage;
   extName?: string;
   filePathOrName?: string;
-}): ProgrammingLanguage | null {
+}): TreeSitterGrammar | null {
   assert(
     xor(filePathOrName !== undefined, extName !== undefined),
     "supply either filePathOrName or extName, not both",
@@ -105,7 +108,7 @@ export function grammarForLanguage({
 
 export function grammarForFilePathOrName(
   filePathOrName: string,
-): ProgrammingLanguage | null {
+): TreeSitterGrammar | null {
   const language = getProgrammingLanguageByFilePathOrName(filePathOrName);
   if (!language) {
     eaveLogger.warning("Unsupported file extension", {

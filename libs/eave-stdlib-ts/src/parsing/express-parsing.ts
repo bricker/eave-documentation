@@ -1,8 +1,9 @@
 import path from "node:path";
 import Parser from "tree-sitter";
 import { ExpressRoutingMethod, JsonObject } from "../types.js";
-import { titleize } from "../util.js";
-import { ESCodeFile } from "./es-parsing.js";
+import { dedent, titleize } from "../util.js";
+import { ESCodeFile, ESNodeType } from "./es-parsing.js";
+import assert from "node:assert";
 
 type ExpressIdentifiers = {
   app?: string;
@@ -13,7 +14,7 @@ export class ExpressCodeFile extends ESCodeFile {
   private __memo_expressAppIdentifiers__?: ExpressIdentifiers;
   private __memo_testExpressRootFile__?: boolean;
 
-  testExpressRootFile(): boolean {
+  get isExpressRootFile(): boolean {
     if (this.__memo_testExpressRootFile__ !== undefined) {
       return this.__memo_testExpressRootFile__;
     }
@@ -23,20 +24,30 @@ export class ExpressCodeFile extends ESCodeFile {
       return false;
     }
 
-    const variables = this.variables();
+    const query = new Parser.Query(this.grammar, dedent(`
+      (
+        call_expression
+          function: (identifier) @fid
+      )
+    `).trim());
 
-    for (const expressionNode of variables.values()) {
-      const children = this.getNodeChildMap({ node: expressionNode });
-      const expression = this.getExpression({ siblings: children });
-      if (expression === "express") {
-        // We think this file initializes an Express server.
-        this.__memo_testExpressRootFile__ = true;
-        return this.__memo_testExpressRootFile__;
-      }
+    const matches = query.matches(this.rootNode.innerNode);
+
+    // Find a `call_expression` with function identifier "express".
+    const expressCallMatch = matches?.some((qmatch: Parser.QueryMatch) => {
+      return qmatch.captures.some((cap: Parser.QueryCapture) => {
+        return cap.node.text === "express";
+      });
+    });
+
+    if (expressCallMatch) {
+      // We think this file initializes an Express server.
+      this.__memo_testExpressRootFile__ = true;
+    } else {
+      // We didn't see an Express server initialized in this file.
+      this.__memo_testExpressRootFile__ = false;
     }
 
-    // We didn't see an Express server initialized in this file.
-    this.__memo_testExpressRootFile__ = false;
     return this.__memo_testExpressRootFile__;
   }
 
@@ -74,7 +85,7 @@ export class ExpressCodeFile extends ESCodeFile {
    * Searches a tree for relevant Express calls and returns the variables that
    * are used to declare the root Express app and the Express Router if needed.
    */
-  getExpressAppIdentifiers(): ExpressIdentifiers {
+  get expressAppIdentifiers(): ExpressIdentifiers {
     if (this.__memo_expressAppIdentifiers__ !== undefined) {
       return this.__memo_expressAppIdentifiers__;
     }

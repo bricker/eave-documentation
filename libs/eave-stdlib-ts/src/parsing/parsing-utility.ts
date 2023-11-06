@@ -1,6 +1,6 @@
 import nodePath from "node:path";
 import Parser from "tree-sitter";
-import { grammarForFilePathOrName } from "./grammars.js";
+import { TreeSitterGrammar, grammarForFilePathOrName, grammarForLanguage } from "./grammars.js";
 import {
   ProgrammingLanguage,
   getProgrammingLanguageByFilePathOrName,
@@ -39,6 +39,10 @@ export class CodeFile {
 
   get language(): ProgrammingLanguage | undefined {
     return getProgrammingLanguageByFilePathOrName(this.path);
+  }
+
+  get grammar(): TreeSitterGrammar | undefined {
+    return grammarForFilePathOrName(this.path) || undefined; // forward null as undefined
   }
 
   get dirname(): string {
