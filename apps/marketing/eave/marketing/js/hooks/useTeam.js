@@ -1,16 +1,12 @@
 // @ts-check
 import { useContext } from "react";
-import {
-  DOC_TYPES,
-  FEATURE_STATE_PROPERTY,
-  FEATURE_STATES,
-} from "../constants.js";
+import { DOC_TYPES, FEATURE_STATES } from "../constants.js";
 import { AppContext } from "../context/Provider.js";
 import * as Types from "../types.js"; // eslint-disable-line no-unused-vars
 import { sortAPIDocuments } from "../util/document-util.js";
 import { isHTTPError, isUnauthorized, logUserOut } from "../util/http-util.js";
 
-/** @returns {{team: Types.DashboardTeam, getTeam: any, getTeamRepos: any, getTeamAPIDocs: any, getTeamFeatureStates: any, updateTeamFeatureState: any}} */
+/** @returns {{team: Types.DashboardTeam, getTeam: any, getTeamRepos: any, getTeamAPIDocs: any, updateTeamFeatureState: any}} */
 const useTeam = () => {
   const { teamCtx } = useContext(AppContext);
   /** @type {[Types.DashboardTeam, (f: (prev: Types.DashboardTeam) => Types.DashboardTeam) => void]} */
@@ -22,7 +18,7 @@ const useTeam = () => {
    * Handles HTTP errors by setting the 'teamIsErroring' state to true.
    * Regardless of success or failure, sets 'teamIsLoading' state to false upon completion.
    */
-  async function getTeam() {
+  function getTeam() {
     setTeam((prev) => ({
       ...prev,
       teamIsLoading: true,
@@ -43,24 +39,25 @@ const useTeam = () => {
         if (isHTTPError(resp)) {
           throw resp;
         }
-        resp.json().then((/** @type {Types.GetTeamResponseBody} */ data) => {
-          setTeam((prev) => ({
-            ...prev,
-            id: data.team?.id,
-            name: data.team?.name,
-            integrations: data.integrations,
-          }));
-        });
+        return resp
+          .json()
+          .then((/** @type {Types.GetTeamResponseBody} */ data) => {
+            setTeam((prev) => ({
+              ...prev,
+              teamIsLoading: false,
+              teamRequestHasSucceededAtLeastOnce: true, // continue to show the table even if a subsequent request failed.
+              id: data.team?.id,
+              name: data.team?.name,
+              integrations: data.integrations,
+            }));
+          });
       })
       .catch(() => {
         setTeam((prev) => ({
           ...prev,
+          teamIsLoading: false,
           teamIsErroring: true,
-          teamRequestHasSucceededAtLeastOnce: true, // continue to show the table even if a subsequent request failed.
         }));
-      })
-      .finally(() => {
-        setTeam((prev) => ({ ...prev, teamIsLoading: false }));
       });
   }
 
@@ -70,7 +67,7 @@ const useTeam = () => {
    * If the request fails, an error flag is set.
    * Regardless of the request outcome, the loading flag is reset at the end.
    */
-  async function getTeamRepos() {
+  function getTeamRepos() {
     setTeam((prev) => ({
       ...prev,
       reposAreLoading: true,
@@ -92,60 +89,33 @@ const useTeam = () => {
         if (isHTTPError(resp)) {
           throw resp;
         }
-        resp
+        return resp
           .json()
           .then((/** @type {Types.GetGithubReposResponseBody} */ data) => {
             setTeam((prev) => ({
               ...prev,
-              repos: data.repos,
+              reposAreLoading: false,
               reposRequestHasSucceededAtLeastOnce: true, // continue to show the table even if a subsequent request failed.
+              repos: data.repos,
+              inlineCodeDocsEnabled: data.repos.some(
+                (repo) =>
+                  repo.inline_code_documentation_state ===
+                  FEATURE_STATES.ENABLED,
+              ),
+              apiDocsEnabled: data.repos.some(
+                (repo) =>
+                  repo.api_documentation_state === FEATURE_STATES.ENABLED,
+              ),
             }));
           });
       })
       .catch(() => {
-        setTeam((prev) => ({ ...prev, reposAreErroring: true }));
-      })
-      .finally(() => {
-        setTeam((prev) => ({ ...prev, reposAreLoading: false }));
+        setTeam((prev) => ({
+          ...prev,
+          reposAreLoading: false,
+          reposAreErroring: true,
+        }));
       });
-  }
-
-  /**
-   * Asynchronously retrieves the feature states for a team based on the provided Github repositories.
-   * It checks if API documentation and inline code documentation are enabled for each repository.
-   * Updates the team's state with the loading status, success status, and the enabled features.
-   *
-   * @async
-   * @function getTeamFeatureStates
-   * @param {Types.GithubRepo[] | undefined} repos - The Github repositories to check for feature states.
-   * @returns {Promise<void>}
-   */
-  async function getTeamFeatureStates(
-    /**@type {Types.GithubRepo[] | undefined}*/ repos,
-  ) {
-    if (!repos) {
-      return;
-    }
-    setTeam((prev) => ({ ...prev, featureStatesLoading: true }));
-    let inlineCodeDocsEnabled = false;
-    let apiDocsEnabled = false;
-    for (const repo of repos) {
-      if (repo[FEATURE_STATE_PROPERTY.API_DOCS] === FEATURE_STATES.ENABLED) {
-        apiDocsEnabled = true;
-      }
-      if (
-        repo[FEATURE_STATE_PROPERTY.INLINE_CODE_DOCS] === FEATURE_STATES.ENABLED
-      ) {
-        inlineCodeDocsEnabled = true;
-      }
-    }
-    setTeam((prev) => ({
-      ...prev,
-      featureStatesLoading: false,
-      featureStatesRequestHasSucceededAtLeastOnce: true,
-      inlineCodeDocsEnabled,
-      apiDocsEnabled,
-    }));
   }
 
   /**
@@ -161,18 +131,13 @@ const useTeam = () => {
    * @param {string} params.feature - The feature to update the state for.
    * @throws {HTTPError} If the HTTP request fails.
    */
-  async function updateTeamFeatureState(
-    /**@type {Types.FeatureStateParams} */ {
+  function updateTeamFeatureState(
+    /** @type {Types.FeatureStateParams} */ {
       teamRepoIds,
       enabledRepoIds,
       feature,
     },
   ) {
-    setTeam((prev) => ({
-      ...prev,
-      featureStatesLoading: true,
-      featureStatesErroring: false,
-    }));
     /** @type {Types.GithubRepoUpdateInput[]} */
     const repos = teamRepoIds.map(
       /** @type {(repoId: string) => Types.GithubRepoUpdateInput} */ (
@@ -205,13 +170,11 @@ const useTeam = () => {
         if (isHTTPError(resp)) {
           throw resp;
         }
+        // Currently there is no UI to handle a success or loading state for this operation.
         getTeamRepos();
       })
       .catch(() => {
-        setTeam((prev) => ({ ...prev, featureStatesErroring: true }));
-      })
-      .finally(() => {
-        setTeam((prev) => ({ ...prev, featureStatesLoading: false }));
+        // Currently there is no UI to handle a failure state for this operation.
       });
   }
 
@@ -223,7 +186,7 @@ const useTeam = () => {
    * The documents are sorted before being set in the state.
    * The state also keeps track of whether a request has succeeded at least once to continue showing the table even if a subsequent request fails.
    */
-  async function getTeamAPIDocs() {
+  function getTeamAPIDocs() {
     setTeam((prev) => ({
       ...prev,
       apiDocsLoading: true,
@@ -244,24 +207,24 @@ const useTeam = () => {
         if (isHTTPError(resp)) {
           throw resp;
         }
-        resp
+        return resp
           .json()
           .then((/**@type {Types.GetGithubDocumentsResponseBody}*/ data) => {
             setTeam((prev) => ({
               ...prev,
-              apiDocs: sortAPIDocuments(data.documents),
+              apiDocsLoading: false,
+              apiDocsFetchCount: prev.apiDocsFetchCount + 1,
               apiDocsRequestHasSucceededAtLeastOnce: true, // continue to show the table even if a subsequent request failed.
+              apiDocs: sortAPIDocuments(data.documents),
             }));
           });
       })
       .catch(() => {
-        setTeam((prev) => ({ ...prev, apiDocsErroring: true }));
-      })
-      .finally(() => {
         setTeam((prev) => ({
           ...prev,
-          apiDocsFetchCount: prev.apiDocsFetchCount + 1,
           apiDocsLoading: false,
+          apiDocsFetchCount: prev.apiDocsFetchCount + 1,
+          apiDocsErroring: true,
         }));
       });
   }
@@ -271,7 +234,6 @@ const useTeam = () => {
     getTeam,
     getTeamRepos,
     getTeamAPIDocs,
-    getTeamFeatureStates,
     updateTeamFeatureState,
   };
 };

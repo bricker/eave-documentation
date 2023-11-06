@@ -5,7 +5,7 @@ from eave.core.internal.orm import github_installation
 
 from eave.core.internal.orm.github_documents import GithubDocumentsOrm
 from eave.core.internal.orm.github_repos import GithubRepoOrm
-from eave.stdlib.core_api.models.github_documents import DocumentType, Status
+from eave.stdlib.core_api.models.github_documents import GithubDocumentType, GithubDocumentStatus
 from eave.stdlib.core_api.operations.github_documents import (
     CreateGithubDocumentRequest,
     GetGithubDocumentsRequest,
@@ -47,7 +47,7 @@ class TestGithubDocumentsRequests(BaseTestCase):
                 github_repo_id=repo.id,
                 api_name="eave-the-best",
                 file_path="/",
-                type=DocumentType.API_DOCUMENT,
+                type=GithubDocumentType.API_DOCUMENT,
             )
             orms.append(doc)
         return orms
@@ -76,13 +76,13 @@ class TestGithubDocumentsRequests(BaseTestCase):
         assert len(response_obj.documents) == 1
         assert response_obj.documents[0].github_repo_id == orms[0].id
         assert response_obj.documents[0].team_id == team.id
-        assert response_obj.documents[0].type == DocumentType.API_DOCUMENT
+        assert response_obj.documents[0].type == GithubDocumentType.API_DOCUMENT
 
     async def test_github_documents_req_get_one_by_type(self) -> None:
         async with self.db_session.begin() as s:
             team = await self.make_team(s)
             orms = await self.create_documents(session=s, team_id=team.id)
-            orms[3].type = DocumentType.ARCHITECTURE_DOCUMENT
+            orms[3].type = GithubDocumentType.ARCHITECTURE_DOCUMENT
             account = await self.make_account(s, team_id=team.id)
 
         response = await self.make_request(
@@ -90,7 +90,7 @@ class TestGithubDocumentsRequests(BaseTestCase):
             payload={
                 "query_params": {
                     "external_repo_id": None,
-                    "type": DocumentType.ARCHITECTURE_DOCUMENT,
+                    "type": GithubDocumentType.ARCHITECTURE_DOCUMENT,
                 }
             },
             team_id=team.id,
@@ -103,7 +103,7 @@ class TestGithubDocumentsRequests(BaseTestCase):
         assert len(response_obj.documents) == 1
         assert response_obj.documents[0].github_repo_id == orms[0].id
         assert response_obj.documents[0].team_id == team.id
-        assert response_obj.documents[0].type == DocumentType.ARCHITECTURE_DOCUMENT
+        assert response_obj.documents[0].type == GithubDocumentType.ARCHITECTURE_DOCUMENT
 
     async def test_github_documents_req_get_many(self) -> None:
         async with self.db_session.begin() as s:
@@ -118,7 +118,7 @@ class TestGithubDocumentsRequests(BaseTestCase):
             payload={
                 "query_params": {
                     "external_repo_id": None,
-                    "type": DocumentType.API_DOCUMENT,
+                    "type": GithubDocumentType.API_DOCUMENT,
                 }
             },
             team_id=team.id,
@@ -133,7 +133,7 @@ class TestGithubDocumentsRequests(BaseTestCase):
             map(lambda doc: doc.team_id == team.id, response_obj.documents)
         ), "not all documents had matching team_id"
         assert all(
-            map(lambda doc: doc.type == DocumentType.API_DOCUMENT, response_obj.documents)
+            map(lambda doc: doc.type == GithubDocumentType.API_DOCUMENT, response_obj.documents)
         ), "not all documents had matching type"
 
     async def test_github_documents_req_update(self) -> None:
@@ -149,7 +149,7 @@ class TestGithubDocumentsRequests(BaseTestCase):
                     "id": str(docs[3].id),
                     "new_values": {
                         "pull_request_number": 34,
-                        "status": Status.PR_MERGED,
+                        "status": GithubDocumentStatus.PR_MERGED,
                         "file_path": "new/location",
                         "api_name": "jimmy-johns-freaky-fast-api",
                     },
@@ -166,7 +166,7 @@ class TestGithubDocumentsRequests(BaseTestCase):
         assert response_obj.document.github_repo_id == docs[3].id
         assert response_obj.document.team_id == team.id
         assert response_obj.document.pull_request_number == 34
-        assert response_obj.document.status == Status.PR_MERGED
+        assert response_obj.document.status == GithubDocumentStatus.PR_MERGED
         assert response_obj.document.file_path == "new/location"
         assert response_obj.document.api_name == "jimmy-johns-freaky-fast-api"
 
@@ -182,7 +182,7 @@ class TestGithubDocumentsRequests(BaseTestCase):
                 "document": {
                     "external_repo_id": repo.external_repo_id,
                     "pull_request_number": None,
-                    "type": DocumentType.ARCHITECTURE_DOCUMENT,
+                    "type": GithubDocumentType.ARCHITECTURE_DOCUMENT,
                     "file_path": "first/location",
                     "api_name": "jimmy-johns-freaky-first-api",
                 }
@@ -197,7 +197,7 @@ class TestGithubDocumentsRequests(BaseTestCase):
         assert response_obj.document.team_id == team.id
         assert response_obj.document.github_repo_id == repo.id
         assert response_obj.document.pull_request_number is None
-        assert response_obj.document.type == DocumentType.ARCHITECTURE_DOCUMENT
+        assert response_obj.document.type == GithubDocumentType.ARCHITECTURE_DOCUMENT
         assert response_obj.document.file_path == "first/location"
         assert response_obj.document.api_name == "jimmy-johns-freaky-first-api"
 
@@ -238,14 +238,14 @@ class TestGithubDocumentsRequests(BaseTestCase):
             team = await self.make_team(s)
             orms = await self.create_documents(session=s, team_id=team.id)
             # change 1 document type to be expected to remain after delete op
-            orms[2].type = DocumentType.ARCHITECTURE_DOCUMENT
+            orms[2].type = GithubDocumentType.ARCHITECTURE_DOCUMENT
             account = await self.make_account(s, team_id=team.id)
 
         # delete some rows from table and make sure request is successful
 
         response = await self.make_request(
             path="/github-documents/delete/type",
-            payload={"documents": {"type": DocumentType.API_DOCUMENT}},
+            payload={"documents": {"type": GithubDocumentType.API_DOCUMENT}},
             team_id=team.id,
             account_id=account.id,
             access_token=account.access_token,

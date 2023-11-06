@@ -6,6 +6,8 @@ sys.path.append(".")
 
 load_standard_dotenv_files()
 
+# ruff: noqa: E402
+
 # Import some common modules
 import asyncio  # noqa
 import os  # noqa

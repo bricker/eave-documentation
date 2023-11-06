@@ -1,12 +1,14 @@
 // @ts-check
 const nodemon = require("nodemon/lib");
 const {
-  loadStandardDotenvFiles,
   populateEnv,
+  loadDotenv,
 } = require("../../../../develop/javascript/dotenv-loader.cjs");
 const { EAVE_HOME } = require("../../../../develop/javascript/constants.cjs");
 
-loadStandardDotenvFiles();
+loadDotenv({ path: "develop/shared/share.env", override: true });
+loadDotenv({ path: ".env", override: true });
+
 populateEnv({
   GAE_SERVICE: "confluence",
   PORT: "5400",

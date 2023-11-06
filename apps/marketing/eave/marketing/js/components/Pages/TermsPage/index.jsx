@@ -7,9 +7,9 @@ import Page from "../Page/index.jsx";
 const makeClasses = makeStyles((theme) => ({
   main: {
     position: "relative",
-    padding: `calc(${theme.header.height}px + 54px) 40px 0`,
+    padding: "54px 40px",
     [theme.breakpoints.up("md")]: {
-      padding: "164px",
+      padding: "54px 164px",
     },
   },
   title: {

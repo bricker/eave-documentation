@@ -14,7 +14,7 @@ import eave.stdlib.core_api.operations.account as account
 import eave.stdlib.core_api.operations.team as team
 import eave.stdlib.core_api.operations.github_repos as github_repos
 import eave.stdlib.core_api.operations.github_documents as github_documents
-from eave.stdlib.core_api.models.github_documents import GithubDocument, GithubDocumentsQueryInput, Status
+from eave.stdlib.core_api.models.github_documents import GithubDocument, GithubDocumentsQueryInput, GithubDocumentStatus
 from eave.stdlib.github_api.operations.query_repos import QueryGithubRepos
 from eave.stdlib.headers import MIME_TYPE_JSON
 from eave.stdlib.util import ensure_uuid, unwrap
@@ -272,11 +272,11 @@ def _json_response(body: JsonObject | str | None) -> Response:
 
 
 _status_order = [
-    Status.PROCESSING,
-    Status.PR_OPENED,
-    Status.FAILED,
-    Status.PR_CLOSED,
-    Status.PR_MERGED,
+    GithubDocumentStatus.PROCESSING,
+    GithubDocumentStatus.PR_OPENED,
+    GithubDocumentStatus.FAILED,
+    GithubDocumentStatus.PR_CLOSED,
+    GithubDocumentStatus.PR_MERGED,
 ]
 
 

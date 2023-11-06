@@ -93,3 +93,13 @@ export function dedent(s: string): string {
   chunks = chunks.map((line) => line.slice(commonLeadingWhitespaceLength));
   return chunks.join("\n");
 }
+
+export function makeString(data: any): string {
+  if (typeof data === "string") {
+    return data;
+  } else if (data instanceof Buffer) {
+    return data.toString();
+  } else {
+    return JSON.stringify(data);
+  }
+}

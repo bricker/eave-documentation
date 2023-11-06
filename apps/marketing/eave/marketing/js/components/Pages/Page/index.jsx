@@ -21,13 +21,18 @@ const makeClasses = makeStyles((theme) => ({
   },
 }));
 
-const Page = ({ children = undefined, simpleHeader = undefined }) => {
+const Page = ({
+  children = undefined,
+  simpleHeader = false,
+  footer = true,
+  compactHeader = false,
+}) => {
   const classes = makeClasses();
   return (
     <div className={classes.container}>
-      <Header simpleHeader={simpleHeader} />
+      <Header simpleHeader={simpleHeader} compactHeader={compactHeader} />
       <div className={classes.sections}>{children}</div>
-      <Footer />
+      {footer && <Footer />}
       <AuthModal />
     </div>
   );

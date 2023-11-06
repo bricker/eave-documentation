@@ -1,4 +1,4 @@
-from typing import Unpack
+from typing import Optional, Unpack
 import uuid
 from eave.stdlib.core_api.models.github import GithubInstallation
 from eave.stdlib.core_api.models.github import GithubInstallationInput
@@ -19,7 +19,7 @@ class GetGithubInstallation(CoreApiEndpoint):
         github_integration: GithubInstallationInput
 
     class ResponseBody(BaseResponseBody):
-        team: team.Team
+        team: Optional[team.Team]
         github_integration: GithubInstallation
 
     @classmethod

@@ -1,6 +1,7 @@
 // @ts-check
 import { Drawer, IconButton } from "@material-ui/core";
 import { makeStyles } from "@material-ui/styles";
+import classNames from "classnames";
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -19,6 +20,8 @@ const makeClasses = makeStyles((/** @type {Types.Theme} */ theme) => ({
     marginBottom: theme["header"].marginBottom,
     width: "100%",
     zIndex: 100,
+  },
+  headerMarginScaling: {
     [theme.breakpoints.up("md")]: {
       marginBottom: theme["header"].md.marginBottom,
     },
@@ -100,8 +103,15 @@ const makeClasses = makeStyles((/** @type {Types.Theme} */ theme) => ({
   },
 }));
 
-const Header = ({ simpleHeader }) => {
+const Header = ({
+  /** @type {boolean} */ simpleHeader = false,
+  /** @type {boolean} */ compactHeader = false,
+}) => {
   const classes = makeClasses();
+  const outterContainer = classNames(
+    classes.outterContainer,
+    !compactHeader && classes.headerMarginScaling,
+  );
   const [drawerIsOpen, setDrawerIsOpen] = useState(false);
   const { openModal } = useAuthModal();
   const { isLoginHintSet } = useUser();
@@ -172,7 +182,7 @@ const Header = ({ simpleHeader }) => {
   );
 
   return (
-    <header className={classes.outterContainer}>
+    <header className={outterContainer}>
       <div className={classes.innerContainer}>
         <div className={classes.logoContainer}>
           <EaveLogo />
@@ -188,7 +198,7 @@ const Header = ({ simpleHeader }) => {
             </IconButton>
             <Drawer open={drawerIsOpen} anchor="right" transitionDuration={600}>
               <div className={classes.mobileMenu}>
-                <div className={classes.outterContainer}>
+                <div className={outterContainer}>
                   <div className={classes.innerContainer}>
                     <div className={classes.logoContainer}>
                       <EaveLogo />

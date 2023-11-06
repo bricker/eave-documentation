@@ -21,6 +21,7 @@ import { LogContext, eaveLogger } from "./logging.js";
 import { CtxArg, makeRequest } from "./requests.js";
 import Signing, { buildMessageToSign, makeSigTs } from "./signing.js";
 import { ExpressRoutingMethod } from "./types.js";
+import { makeString } from "./util.js";
 
 type CreateTaskSharedArgs = CtxArg & {
   queueName: string;
@@ -32,7 +33,7 @@ type CreateTaskSharedArgs = CtxArg & {
 };
 
 type CreateTaskArgs = CreateTaskSharedArgs & {
-  payload: Buffer | object | string;
+  payload: any;
   headers?: { [key: string]: string };
 };
 
@@ -56,6 +57,16 @@ export async function createTaskFromRequest({
 }: CreateTaskFromRequestArgs): Promise<void> {
   ctx = LogContext.wrap(ctx, req);
 
+  // keep the event in redis since GCP Task Queue can only accept 100kb task size
+  let payload = req.body;
+  const pointerPayload: BodyCacheEntry = { cacheKey: ctx.eave_request_id };
+  const cacheClient = await getCacheClient();
+  await cacheClient.set(pointerPayload.cacheKey, makeString(payload), {
+    EX: 60 * 60 * 24,
+  }); // TTL 24h
+
+  payload = makeString(pointerPayload);
+
   if (!uniqueTaskId) {
     const traceId = req.header(GCP_CLOUD_TRACE_CONTEXT);
     const logId = req.header(GCP_GAE_REQUEST_LOG_ID);
@@ -67,13 +78,6 @@ export async function createTaskFromRequest({
     }
   }
 
-  // keep the event in redis since GCP Task Queue can only accept 100kb task size
-  const cacheClient = await getCacheClient();
-  await cacheClient.set(ctx.eave_request_id, normalizeString(req.body), {
-    EX: 60 * 60 * 24,
-  }); // TTL 24h
-
-  const payload: BodyCacheEntry = { cacheKey: ctx.eave_request_id };
   const headers: { [key: string]: string } = {};
   // FIXME: Is there a cleaner way to do this? req.headers is a NodeJS.Dict typescript object.
   // eslint-disable-next-line no-restricted-syntax
@@ -90,10 +94,10 @@ export async function createTaskFromRequest({
   delete headers[httpConstants.HTTP2_HEADER_USER_AGENT];
 
   await createTask({
-    queueName,
     targetPath,
-    origin,
+    queueName,
     audience,
+    origin,
     uniqueTaskId,
     taskNamePrefix,
     payload,
@@ -115,11 +119,11 @@ export async function createTask({
 }: CreateTaskArgs): Promise<void> {
   ctx = LogContext.wrap(ctx);
 
+  payload = makeString(payload);
+
   if (!headers) {
     headers = {};
   }
-
-  const body = normalizeString(payload);
 
   const teamId = headers[EAVE_TEAM_ID_HEADER] || ctx.eave_team_id;
   const accountId = headers[EAVE_ACCOUNT_ID_HEADER] || ctx.eave_account_id;
@@ -134,7 +138,7 @@ export async function createTask({
     requestId,
     origin,
     audience,
-    payload: body,
+    payload,
     teamId,
     accountId,
     ctx,
@@ -172,7 +176,7 @@ export async function createTask({
       headers,
       httpMethod: "POST",
       relativeUri: targetPath,
-      body: Buffer.from(body).toString("base64"),
+      body: Buffer.from(payload).toString("base64"),
     },
   };
 
@@ -223,24 +227,12 @@ export async function createTask({
       config: endpointConfig,
       origin,
       ctx,
-      input: task.appEngineHttpRequest.body,
+      input: payload, // not b64 encoded
       addlHeaders: task.appEngineHttpRequest.headers || undefined,
     });
   }
 
   await client.createTask({ parent, task });
-}
-
-function normalizeString(payload: any): string {
-  let body: string;
-  if (payload instanceof Buffer) {
-    body = payload.toString();
-  } else if (typeof payload === "string") {
-    body = payload;
-  } else {
-    body = JSON.stringify(payload);
-  }
-  return body;
 }
 
 export async function getCachedPayload(req: Request): Promise<string> {
@@ -256,5 +248,5 @@ export async function getCachedPayload(req: Request): Promise<string> {
       "Could not find expected cached event body. Maybe the TTL needs to be extended?",
     );
   }
-  return normalizeString(cachedBody);
+  return makeString(cachedBody);
 }

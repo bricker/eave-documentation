@@ -8,7 +8,12 @@ from sqlalchemy import func, select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
-from eave.stdlib.core_api.models.github_documents import GithubDocument, GithubDocumentValuesInput, Status, DocumentType
+from eave.stdlib.core_api.models.github_documents import (
+    GithubDocument,
+    GithubDocumentValuesInput,
+    GithubDocumentStatus,
+    GithubDocumentType,
+)
 from eave.stdlib.util import ensure_uuid
 
 from .base import Base
@@ -33,7 +38,7 @@ class GithubDocumentsOrm(Base):
     id: Mapped[UUID] = mapped_column(server_default=UUID_DEFAULT_EXPR)
     pull_request_number: Mapped[Optional[int]] = mapped_column(server_default=None)
     """Number of the most recent PR opened for this document"""
-    status: Mapped[str] = mapped_column(server_default=Status.PROCESSING.value)
+    status: Mapped[str] = mapped_column()
     """Current state of API documentation for this repo. options: processing, under-review, up-to-date"""
     status_updated: Mapped[datetime] = mapped_column(server_default=func.current_timestamp())
     """Last time the `status` column was updated."""
@@ -55,7 +60,7 @@ class GithubDocumentsOrm(Base):
         id: Optional[UUID | str] = None
         team_id: Optional[UUID | str] = None
         github_repo_id: Optional[UUID] = None
-        type: Optional[DocumentType] = None
+        type: Optional[GithubDocumentType] = None
         pull_request_number: Optional[int] = None
 
     @classmethod
@@ -97,11 +102,11 @@ class GithubDocumentsOrm(Base):
         session: AsyncSession,
         team_id: UUID,
         github_repo_id: UUID,
-        type: DocumentType,
+        type: GithubDocumentType,
         file_path: Optional[str] = None,
         api_name: Optional[str] = None,
         pull_request_number: Optional[int] = None,
-        status: Status = Status.PROCESSING,
+        status: Optional[GithubDocumentStatus] = None,
         status_updated: Optional[datetime] = None,
     ) -> Self:
         obj = cls(
@@ -111,7 +116,7 @@ class GithubDocumentsOrm(Base):
             api_name=api_name,
             type=type.value,
             pull_request_number=pull_request_number,
-            status=status.value,
+            status=status or GithubDocumentStatus.PROCESSING.value,
             status_updated=status_updated,
         )
         session.add(obj)
@@ -139,6 +144,6 @@ class GithubDocumentsOrm(Base):
         await session.execute(stmt)
 
     @classmethod
-    async def delete_by_type(cls, team_id: UUID, type: DocumentType, session: AsyncSession) -> None:
+    async def delete_by_type(cls, team_id: UUID, type: GithubDocumentType, session: AsyncSession) -> None:
         stmt = delete(cls).where(cls.team_id == team_id).where(cls.type == type)
         await session.execute(stmt)

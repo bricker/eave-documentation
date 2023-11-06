@@ -11,6 +11,7 @@ import { GithubEventHandlerTaskOperation } from "@eave-fyi/eave-stdlib-ts/src/gi
 import { GetGithubUrlContentOperation } from "@eave-fyi/eave-stdlib-ts/src/github-api/operations/get-content.js";
 import { QueryGithubReposOperation } from "@eave-fyi/eave-stdlib-ts/src/github-api/operations/query-repos.js";
 import { RunApiDocumentationTaskOperation } from "@eave-fyi/eave-stdlib-ts/src/github-api/operations/run-api-documentation-task.js";
+import { VerifyInstallationOperation } from "@eave-fyi/eave-stdlib-ts/src/github-api/operations/verify-installation.js";
 import { jsonParser } from "@eave-fyi/eave-stdlib-ts/src/middleware/body-parser.js";
 import {
   commonRequestMiddlewares,
@@ -23,6 +24,7 @@ import { getContentSummaryHandler } from "./api/content.js";
 import { createPullRequestHandler } from "./api/create-pull-request.js";
 import { queryReposHandler } from "./api/repos.js";
 import { subscribeHandler } from "./api/subscribe.js";
+import { verifyInstallation } from "./api/verify-installation.js";
 import { cronDispatchHandler } from "./cron/cron-dispatch.js";
 import { webhookEventHandler } from "./events/webhook.js";
 import { validateGithubWebhookHeaders } from "./middleware/process-webhook-payload.js";
@@ -65,6 +67,11 @@ makeRoute({
   router: app,
   config: QueryGithubReposOperation.config,
   handler: queryReposHandler,
+});
+makeRoute({
+  router: app,
+  config: VerifyInstallationOperation.config,
+  handler: verifyInstallation,
 });
 
 // Offline Tasks

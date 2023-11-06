@@ -5,11 +5,12 @@ import os
 import sys
 from eave.dev_tooling.constants import EAVE_HOME
 
-from eave.dev_tooling.dotenv_loader import load_standard_dotenv_files
+from eave.dev_tooling.dotenv_loader import load_dotenv
 
 sys.path.append(".")
 
-load_standard_dotenv_files()
+load_dotenv("develop/shared/share.env", override=True)
+load_dotenv(".env", override=True)
 
 os.environ["GAE_SERVICE"] = "api"
 

@@ -9,10 +9,12 @@ if os.path.isfile(_deprecated_file):
 
 dotenv.load_dotenv(dotenv_path=os.path.join(EAVE_HOME, ".test.env"), override=True)
 
-import json  # noqa: E402
-import uuid  # noqa: E402
-import eave.stdlib.time  # noqa: E402
-import eave.stdlib.util  # noqa: E402
+# ruff: noqa: E402
+
+import json
+import uuid
+import eave.stdlib.time
+import eave.stdlib.util
 
 eave.stdlib.time.set_utc()
 

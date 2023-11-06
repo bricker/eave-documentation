@@ -7,7 +7,7 @@ from eave.stdlib.core_api.models import BaseResponseModel
 from eave.stdlib.core_api.models import BaseInputModel
 
 
-class Status(StrEnum):
+class GithubDocumentStatus(StrEnum):
     PROCESSING = "processing"
     FAILED = "failed"
     PR_OPENED = "pr_opened"
@@ -15,7 +15,7 @@ class Status(StrEnum):
     PR_CLOSED = "pr_closed"
 
 
-class DocumentType(StrEnum):
+class GithubDocumentType(StrEnum):
     API_DOCUMENT = "api_document"
     ARCHITECTURE_DOCUMENT = "architecture_document"
 
@@ -25,23 +25,23 @@ class GithubDocument(BaseResponseModel):
     team_id: uuid.UUID
     github_repo_id: uuid.UUID
     pull_request_number: Optional[int]
-    status: Status
+    status: GithubDocumentStatus
     status_updated: datetime.datetime
     file_path: Optional[str]
     api_name: Optional[str]
-    type: DocumentType
+    type: GithubDocumentType
 
 
 class GithubDocumentsQueryInput(BaseInputModel):
     id: Optional[uuid.UUID] = None
     github_repo_id: Optional[uuid.UUID] = None
-    type: Optional[DocumentType] = None
+    type: Optional[GithubDocumentType] = None
     pull_request_number: Optional[int] = None
 
 
 class GithubDocumentCreateInput(BaseInputModel):
-    type: DocumentType
-    status: Status
+    type: GithubDocumentType
+    status: Optional[GithubDocumentStatus] = None
     file_path: Optional[str]
     api_name: Optional[str]
     pull_request_number: Optional[int]
@@ -49,7 +49,7 @@ class GithubDocumentCreateInput(BaseInputModel):
 
 class GithubDocumentValuesInput(BaseInputModel):
     pull_request_number: Optional[int] = None
-    status: Optional[Status] = None
+    status: Optional[GithubDocumentStatus] = None
     file_path: Optional[str] = None
     api_name: Optional[str] = None
 
@@ -64,4 +64,4 @@ class GithubDocumentsDeleteByIdsInput(BaseInputModel):
 
 
 class GithubDocumentsDeleteByTypeInput(BaseInputModel):
-    type: DocumentType
+    type: GithubDocumentType

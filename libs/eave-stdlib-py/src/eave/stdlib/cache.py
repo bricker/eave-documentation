@@ -122,6 +122,12 @@ def client() -> CacheInterface | None:
     return _PROCESS_CACHE_CLIENT
 
 
+def client_or_exception() -> CacheInterface:
+    cache_client = client()
+    assert cache_client is not None, "cache client unexpectedly None"
+    return cache_client
+
+
 def initialized_client() -> Optional[CacheInterface]:
     """
     Before closing a connection, check this property.

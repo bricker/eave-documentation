@@ -1,7 +1,14 @@
 // @ts-check
-const path = require("node:path");
+const platformPath = require("node:path");
 const dotenv = require("dotenv");
 const { EAVE_HOME, GOOGLE_CLOUD_PROJECT } = require("./constants.cjs");
+
+function loadDotenv({ path, override = true }) {
+  dotenv.config({
+    path: platformPath.join(EAVE_HOME, path),
+    override,
+  });
+}
 
 /**
  * Loads environment variables from standard dotenv files.
@@ -13,18 +20,11 @@ const { EAVE_HOME, GOOGLE_CLOUD_PROJECT } = require("./constants.cjs");
  * All loaded variables override existing ones.
  */
 function loadStandardDotenvFiles() {
-  dotenv.config({
-    path: path.join(EAVE_HOME, "develop/shared/share.env"),
-    override: true,
-  });
-
-  dotenv.config({ path: path.join(EAVE_HOME, ".env"), override: true });
+  loadDotenv({ path: "develop/shared/share.env", override: true });
+  loadDotenv({ path: ".env", override: true });
 
   try {
-    dotenv.config({
-      path: path.join(EAVE_HOME, `.${GOOGLE_CLOUD_PROJECT}.env`),
-      override: true,
-    });
+    loadDotenv({ path: `.${GOOGLE_CLOUD_PROJECT}.env`, override: true });
   } catch (e) {
     console.warn(`.${GOOGLE_CLOUD_PROJECT}.env file not found`);
   }
@@ -42,4 +42,4 @@ function populateEnv(
   dotenv.populate(process.env, parsed, { override: true });
 }
 
-module.exports = { loadStandardDotenvFiles, populateEnv };
+module.exports = { loadDotenv, loadStandardDotenvFiles, populateEnv };

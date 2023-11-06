@@ -1,7 +1,16 @@
+import sys
+
+sys.path.append(".")
+
+from eave.dev_tooling.dotenv_loader import load_standard_dotenv_files
+
+load_standard_dotenv_files()
+
+# ruff: noqa: E402
+
 import asyncio
 import logging
 import os
-import sys
 
 import sqlalchemy
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -12,30 +21,26 @@ import alembic.command
 import eave.core.internal
 import eave.core.internal.orm
 import eave.core.internal.orm.base
-from eave.dev_tooling.dotenv_loader import load_standard_dotenv_files
 
 from eave.stdlib.logging import eaveLogger
 
-sys.path.append(".")
 
-load_standard_dotenv_files()
+_alembic_config = alembic.config.Config("alembic.ini")
 
-alembic_config = alembic.config.Config("alembic.ini")
+_EAVE_DB_NAME = os.getenv("EAVE_DB_NAME")
+_GOOGLE_CLOUD_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT")
+_GCLOUD_PROJECT = os.getenv("GCLOUD_PROJECT")
+_GAE_ENV = os.getenv("GAE_ENV")
 
-EAVE_DB_NAME = os.getenv("EAVE_DB_NAME")
-GOOGLE_CLOUD_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT")
-GCLOUD_PROJECT = os.getenv("GCLOUD_PROJECT")
-GAE_ENV = os.getenv("GAE_ENV")
-
-eaveLogger.fprint(logging.INFO, f"> GOOGLE_CLOUD_PROJECT: {GOOGLE_CLOUD_PROJECT}")
-eaveLogger.fprint(logging.INFO, f"> EAVE_DB_NAME: {EAVE_DB_NAME}")
+eaveLogger.fprint(logging.INFO, f"> GOOGLE_CLOUD_PROJECT: {_GOOGLE_CLOUD_PROJECT}")
+eaveLogger.fprint(logging.INFO, f"> EAVE_DB_NAME: {_EAVE_DB_NAME}")
 
 # Some attempts to prevent this script from running against the production database
-assert GAE_ENV is None
-assert GOOGLE_CLOUD_PROJECT != "eave-production"
-assert GCLOUD_PROJECT != "eave-production"
-assert EAVE_DB_NAME is not None
-assert EAVE_DB_NAME != "eave"
+assert _GAE_ENV is None
+assert _GOOGLE_CLOUD_PROJECT != "eave-production"
+assert _GCLOUD_PROJECT != "eave-production"
+assert _EAVE_DB_NAME is not None
+assert _EAVE_DB_NAME != "eave"
 
 
 async def init_database() -> None:
@@ -49,13 +54,13 @@ async def init_database() -> None:
     eaveLogger.fprint(logging.INFO, f"> Postgres connection URI: {eave.core.internal.database.async_engine.url}")
 
     eaveLogger.fprint(
-        logging.WARNING, f"\nThis script will perform the following operations on the {EAVE_DB_NAME} database:"
+        logging.WARNING, f"\nThis script will perform the following operations on the {_EAVE_DB_NAME} database:"
     )
     eaveLogger.fprint(logging.WARNING, "- 💥 DELETES THE DATABASE 💥 (if it exists)")
     eaveLogger.fprint(logging.WARNING, "- (RE-)CREATES THE DATABASE")
 
     answer = input(
-        eaveLogger.f(logging.WARNING, f"Proceed to delete and (re-)create the {EAVE_DB_NAME} database? (Y/n) ")
+        eaveLogger.f(logging.WARNING, f"Proceed to delete and (re-)create the {_EAVE_DB_NAME} database? (Y/n) ")
     )
     if answer != "Y":
         print("Aborting.")
@@ -67,9 +72,9 @@ async def init_database() -> None:
         return
 
     async with postgres_engine.begin() as connection:
-        stmt = f'DROP DATABASE IF EXISTS "{EAVE_DB_NAME}"'
+        stmt = f'DROP DATABASE IF EXISTS "{_EAVE_DB_NAME}"'
         await connection.execute(sqlalchemy.text(stmt))
-        stmt = f'CREATE DATABASE "{EAVE_DB_NAME}"'
+        stmt = f'CREATE DATABASE "{_EAVE_DB_NAME}"'
         await connection.execute(sqlalchemy.text(stmt))
 
     # create tables in empty db
@@ -78,7 +83,7 @@ async def init_database() -> None:
 
     alembic.command.stamp(
         revision="head",
-        config=alembic_config,
+        config=_alembic_config,
     )
 
     await postgres_engine.dispose()

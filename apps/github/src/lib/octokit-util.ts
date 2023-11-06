@@ -42,11 +42,14 @@ export async function githubAppClient(): Promise<App> {
     const secret = await appConfig.eaveGithubAppWebhookSecret;
     const privateKey = await appConfig.eaveGithubAppPrivateKey;
     const appId = await appConfig.eaveGithubAppId;
+    const clientId = await appConfig.eaveGithubAppClientId;
+    const clientSecret = await appConfig.eaveGithubAppClientSecret;
 
     const app = new App({
       appId,
       privateKey,
       webhooks: { secret },
+      oauth: { clientId, clientSecret },
     });
 
     _APP_CLIENT = app;

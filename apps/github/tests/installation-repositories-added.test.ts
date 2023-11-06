@@ -1,7 +1,7 @@
 import {
-  Feature,
   GithubRepo,
-  State,
+  GithubRepoFeature,
+  GithubRepoFeatureState,
 } from "@eave-fyi/eave-stdlib-ts/src/core-api/models/github-repos.js";
 import { Team } from "@eave-fyi/eave-stdlib-ts/src/core-api/models/team.js";
 import {
@@ -45,9 +45,9 @@ function anyRepo(t: TestUtil): GithubRepo {
     external_repo_id: t.anystr(),
     display_name: null,
     github_installation_id: t.anystr(),
-    inline_code_documentation_state: State.DISABLED,
-    architecture_documentation_state: State.DISABLED,
-    api_documentation_state: State.DISABLED,
+    inline_code_documentation_state: GithubRepoFeatureState.DISABLED,
+    architecture_documentation_state: GithubRepoFeatureState.DISABLED,
+    api_documentation_state: GithubRepoFeatureState.DISABLED,
   };
 }
 
@@ -143,7 +143,7 @@ test.serial(
         sinon.match({
           input: {
             query_params: {
-              feature: Feature.INLINE_CODE_DOCUMENTATION,
+              feature: GithubRepoFeature.INLINE_CODE_DOCUMENTATION,
             },
           },
         }),
@@ -186,9 +186,9 @@ test.serial(
             repo: {
               external_repo_id: t.context.u.getstr("repo1 id"),
               display_name: t.context.u.getstr("repo1 name"),
-              api_documentation_state: State.DISABLED,
-              inline_code_documentation_state: State.ENABLED,
-              architecture_documentation_state: State.DISABLED,
+              api_documentation_state: GithubRepoFeatureState.DISABLED,
+              inline_code_documentation_state: GithubRepoFeatureState.ENABLED,
+              architecture_documentation_state: GithubRepoFeatureState.DISABLED,
             },
           },
         }),
@@ -218,7 +218,7 @@ test.serial(
         sinon.match({
           input: {
             query_params: {
-              feature: Feature.INLINE_CODE_DOCUMENTATION,
+              feature: GithubRepoFeature.INLINE_CODE_DOCUMENTATION,
             },
           },
         }),
@@ -269,9 +269,9 @@ test.serial(
               github_installation_id: t.context.u.getstr(
                 "github_installation_id",
               ),
-              api_documentation_state: State.DISABLED,
-              inline_code_documentation_state: State.ENABLED,
-              architecture_documentation_state: State.DISABLED,
+              api_documentation_state: GithubRepoFeatureState.DISABLED,
+              inline_code_documentation_state: GithubRepoFeatureState.ENABLED,
+              architecture_documentation_state: GithubRepoFeatureState.DISABLED,
             },
           },
         }),
@@ -287,9 +287,9 @@ test.serial(
               github_installation_id: t.context.u.getstr(
                 "github_installation_id",
               ),
-              api_documentation_state: State.DISABLED,
-              inline_code_documentation_state: State.ENABLED,
-              architecture_documentation_state: State.DISABLED,
+              api_documentation_state: GithubRepoFeatureState.DISABLED,
+              inline_code_documentation_state: GithubRepoFeatureState.ENABLED,
+              architecture_documentation_state: GithubRepoFeatureState.DISABLED,
             },
           },
         }),
@@ -349,9 +349,9 @@ test.serial(
             repo: {
               external_repo_id: t.context.u.getstr("repo1 id"),
               display_name: t.context.u.getstr("repo1 name"),
-              api_documentation_state: State.DISABLED,
-              inline_code_documentation_state: State.DISABLED,
-              architecture_documentation_state: State.DISABLED,
+              api_documentation_state: GithubRepoFeatureState.DISABLED,
+              inline_code_documentation_state: GithubRepoFeatureState.DISABLED,
+              architecture_documentation_state: GithubRepoFeatureState.DISABLED,
             },
           },
         }),
@@ -375,8 +375,9 @@ test.serial(
       .stub(FeatureStateGithubReposOperation, "perform")
       .returns(Promise.resolve({ states_match: true }));
     const createdRepo = anyRepo(t.context.u);
-    createdRepo.api_documentation_state = State.ENABLED;
-    createdRepo.inline_code_documentation_state = State.ENABLED;
+    createdRepo.api_documentation_state = GithubRepoFeatureState.ENABLED;
+    createdRepo.inline_code_documentation_state =
+      GithubRepoFeatureState.ENABLED;
     const createGithubRepoStub = t.context.sandbox
       .stub(CreateGithubRepoOperation, "perform")
       .returns(Promise.resolve({ repo: createdRepo }));
@@ -422,9 +423,9 @@ test.serial(
               github_installation_id: t.context.u.getstr(
                 "github_installation_id",
               ),
-              api_documentation_state: State.ENABLED,
-              inline_code_documentation_state: State.ENABLED,
-              architecture_documentation_state: State.DISABLED,
+              api_documentation_state: GithubRepoFeatureState.ENABLED,
+              inline_code_documentation_state: GithubRepoFeatureState.ENABLED,
+              architecture_documentation_state: GithubRepoFeatureState.DISABLED,
             },
           },
         }),
@@ -440,9 +441,9 @@ test.serial(
               github_installation_id: t.context.u.getstr(
                 "github_installation_id",
               ),
-              api_documentation_state: State.ENABLED,
-              inline_code_documentation_state: State.ENABLED,
-              architecture_documentation_state: State.DISABLED,
+              api_documentation_state: GithubRepoFeatureState.ENABLED,
+              inline_code_documentation_state: GithubRepoFeatureState.ENABLED,
+              architecture_documentation_state: GithubRepoFeatureState.DISABLED,
             },
           },
         }),

@@ -1,3 +1,4 @@
+import { EphemeralCache } from "@eave-fyi/eave-stdlib-ts/src/cache.js";
 import {
   Blob,
   Commit,
@@ -7,20 +8,19 @@ import {
 } from "@octokit/graphql-schema";
 import assert from "node:assert";
 import { promises as fs } from "node:fs";
-import GlobalCache from "../lib/cache.js";
 
-// document me
+const queryCache = new EphemeralCache();
 
 export async function loadQuery(name: string): Promise<string> {
   const queryCacheKey = `query.${name}`;
-  const cachedQuery = await GlobalCache.get(queryCacheKey);
+  const cachedQuery = await queryCache.get(queryCacheKey);
   if (cachedQuery !== null) {
     return cachedQuery.toString();
   }
 
   const query = await fs.readFile(`./src/graphql/${name}.graphql`, "utf-8");
   const compiledQuery = await compileQuery(query);
-  await GlobalCache.set(queryCacheKey, compiledQuery);
+  await queryCache.set(queryCacheKey, compiledQuery);
   return compiledQuery;
 }
 
@@ -57,13 +57,13 @@ async function prependFragments(
   for (const fragmentName of missingFragments) {
     manifest.add(fragmentName);
     const fragmentCacheKey = `fragment.${fragmentName}`;
-    let fragmentData = await GlobalCache.get(fragmentCacheKey);
+    let fragmentData = await queryCache.get(fragmentCacheKey);
     if (fragmentData === null) {
       fragmentData = await fs.readFile(
         `./src/graphql/fragments/${fragmentName}.graphql`,
         "utf-8",
       );
-      await GlobalCache.set(fragmentCacheKey, fragmentData);
+      await queryCache.set(fragmentCacheKey, fragmentData);
     }
 
     newQuery = `${fragmentData}\n\n${newQuery}`;
@@ -124,7 +124,7 @@ export function assertIsCommit(
  * Doesn't do anything, only useful for syntax highlighting of graphql query strings during development.
  * This works because the GraphQL VSCode plugin highlights strings in the `graphql` (or `gql`) tagged templates, even if it's not the "official" one.
  * Example: graphql(`query() { ... }`)
-* Note that this isn't meant to be used as a tagged template, because the parameters aren't the right type. But the GraphQL VSCode plugin highlights it anyways.
+ * Note that this isn't meant to be used as a tagged template, because the parameters aren't the right type. But the GraphQL VSCode plugin highlights it anyways.
  */
 export function graphql(v: string): string {
   return v;

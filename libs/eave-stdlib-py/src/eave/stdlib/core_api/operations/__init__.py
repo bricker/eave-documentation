@@ -69,7 +69,10 @@ class Endpoint:
     @classmethod
     async def make_response(cls, response: aiohttp.ClientResponse, response_type: Type[T]) -> T:
         response_json = await response.json()
-        r = response_type(**response_json)
+        if response_json:
+            r = response_type(**response_json)
+        else:
+            r = response_type()
         r._raw_response = response
         return r
 

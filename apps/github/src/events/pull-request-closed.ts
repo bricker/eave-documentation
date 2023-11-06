@@ -1,11 +1,11 @@
 import { logEvent } from "@eave-fyi/eave-stdlib-ts/src/analytics.js";
 import {
   GithubDocument,
-  Status,
+  GithubDocumentStatus,
 } from "@eave-fyi/eave-stdlib-ts/src/core-api/models/github-documents.js";
 import {
   GithubRepo,
-  State,
+  GithubRepoFeatureState,
 } from "@eave-fyi/eave-stdlib-ts/src/core-api/models/github-repos.js";
 import { Team } from "@eave-fyi/eave-stdlib-ts/src/core-api/models/team.js";
 import {
@@ -110,9 +110,9 @@ export default async function handler({
     }
 
     const interaction = event.pull_request.merged
-      ? Status.PR_MERGED
-      : Status.PR_CLOSED;
-    if (interaction === Status.PR_MERGED) {
+      ? GithubDocumentStatus.PR_MERGED
+      : GithubDocumentStatus.PR_CLOSED;
+    if (interaction === GithubDocumentStatus.PR_MERGED) {
       await logEvent(
         {
           event_name: "github_eave_pr_merged",
@@ -395,7 +395,7 @@ async function updateDocsPullRequestStatus({
   documents,
   status,
 }: {
-  status: Status;
+  status: GithubDocumentStatus;
   eaveTeam: Team;
   documents: GithubDocument[];
 } & CtxArg) {
@@ -484,6 +484,6 @@ async function codeDocsEnabledForRepo({
   const maybeRepo = repos.find((repo) => repo.external_repo_id === repoId);
   return (
     maybeRepo !== undefined &&
-    maybeRepo.inline_code_documentation_state === State.ENABLED
+    maybeRepo.inline_code_documentation_state === GithubRepoFeatureState.ENABLED
   );
 }

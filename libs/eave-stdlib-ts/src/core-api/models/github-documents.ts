@@ -1,6 +1,6 @@
 import { JsonDate } from "../../types.js";
 
-export enum Status {
+export enum GithubDocumentStatus {
   PROCESSING = "processing",
   FAILED = "failed",
   PR_OPENED = "pr_opened",
@@ -8,7 +8,7 @@ export enum Status {
   PR_CLOSED = "pr_closed",
 }
 
-export enum DocumentType {
+export enum GithubDocumentType {
   API_DOCUMENT = "api_document",
   ARCHITECTURE_DOCUMENT = "architecture_document",
 }
@@ -18,32 +18,32 @@ export type GithubDocument = {
   team_id: string;
   github_repo_id: string;
   pull_request_number: number | null;
-  status: Status;
+  status: GithubDocumentStatus;
   status_updated: JsonDate;
   file_path: string | null;
   api_name: string | null;
-  type: DocumentType;
+  type: GithubDocumentType;
 };
 
 export type GithubDocumentsQueryInput = {
   id?: string;
   github_repo_id?: string;
-  type?: DocumentType;
+  type?: GithubDocumentType;
   pull_request_number?: number;
   // TODO: Validation
 };
 
 export type GithubDocumentCreateInput = {
+  type: GithubDocumentType;
+  status?: GithubDocumentStatus;
   file_path: string | null;
   api_name: string | null;
-  type: DocumentType;
   pull_request_number: number | null;
-  status: Status;
 };
 
 export type GithubDocumentValuesInput = {
   pull_request_number?: number;
-  status?: Status;
+  status?: GithubDocumentStatus;
   file_path?: string;
   api_name?: string;
 };
@@ -58,5 +58,5 @@ export type GithubDocumentsDeleteByIdsInput = {
 };
 
 export type GithubDocumentsDeleteByTypeInput = {
-  type: DocumentType;
+  type: GithubDocumentType;
 };

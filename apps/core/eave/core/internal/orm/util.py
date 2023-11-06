@@ -25,4 +25,5 @@ def make_team_composite_pk() -> PrimaryKeyConstraint:
     return PrimaryKeyConstraint(
         "team_id",
         "id",
+        name="pk_team_id_id",
     )

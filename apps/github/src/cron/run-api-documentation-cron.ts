@@ -1,6 +1,6 @@
 import {
-  Feature,
-  State,
+  GithubRepoFeature,
+  GithubRepoFeatureState,
 } from "@eave-fyi/eave-stdlib-ts/src/core-api/models/github-repos.js";
 import { GetAllTeamGithubReposOperation } from "@eave-fyi/eave-stdlib-ts/src/core-api/operations/github-repos.js";
 import { EaveApp } from "@eave-fyi/eave-stdlib-ts/src/eave-origins.js";
@@ -28,14 +28,18 @@ export async function runApiDocumentationCronHandler(
     ctx,
     input: {
       query_params: {
-        feature: Feature.API_DOCUMENTATION,
-        state: State.ENABLED,
+        feature: GithubRepoFeature.API_DOCUMENTATION,
+        state: GithubRepoFeatureState.ENABLED,
       },
     },
   });
 
   for (const repo of response.repos) {
     await createTask({
+      targetPath: RunApiDocumentationTaskOperation.config.path,
+      queueName: GITHUB_EVENT_QUEUE_NAME,
+      audience: EaveApp.eave_github_app,
+      origin: EaveApp.eave_github_app,
       payload: {
         repo: {
           external_repo_id: repo.external_repo_id,
@@ -45,10 +49,6 @@ export async function runApiDocumentationCronHandler(
         [EAVE_TEAM_ID_HEADER]: repo.team_id,
         [EAVE_REQUEST_ID_HEADER]: ctx.eave_request_id,
       },
-      queueName: GITHUB_EVENT_QUEUE_NAME,
-      targetPath: RunApiDocumentationTaskOperation.config.path,
-      origin: EaveApp.eave_github_app,
-      audience: EaveApp.eave_github_app,
       ctx,
     });
   }

@@ -226,8 +226,7 @@ class AccountOrm(Base):
                 # See https://github.com/googleapis/google-auth-library-python-httplib2/blob/f5ed19e7e5b2b8959d16b2b1e6a6bdd6ff0c0ef6/google_auth_httplib2.py#L151-L152
                 await self.verify_oauth_or_exception(session=session, ctx=ctx)
                 return True
-            case AuthProvider.atlassian:
-                return True
+
             case _:
                 raise  # TODO: Better error reporting. This case should never be reached though.
 

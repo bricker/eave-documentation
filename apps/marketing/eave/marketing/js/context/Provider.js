@@ -17,24 +17,23 @@ const AppContextProvider = ({ children }) => {
   });
 
   const [team, setTeam] = useState({
-    id: {},
-    name: "",
     teamIsLoading: true,
     teamIsErroring: false,
-    integrations: {},
-    repos: [],
     reposAreLoading: true,
     reposAreErroring: false,
-    repoCreationInProgress: false,
-    repoCreationIsErroring: false,
-    inlineCodeDocsEnabled: false,
-    apiDocsEnabled: false,
-    apiDocs: [],
-    apiDocsFetchCount: 0,
     apiDocsLoading: true,
     apiDocsErroring: false,
-    featureStatesLoading: true,
-    featureStatesErroring: false,
+    apiDocsFetchCount: 0,
+    teamRequestHasSucceededAtLeastOnce: false,
+    reposRequestHasSucceededAtLeastOnce: false,
+    apiDocsRequestHasSucceededAtLeastOnce: false,
+    inlineCodeDocsEnabled: false,
+    apiDocsEnabled: false,
+    id: {},
+    name: "",
+    apiDocs: [],
+    integrations: {},
+    repos: [],
   });
 
   const ctx = {

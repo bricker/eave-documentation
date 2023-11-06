@@ -2,6 +2,7 @@ import base64
 import contextlib
 import hashlib
 from functools import wraps
+import json
 from typing import Any, Awaitable, Callable, Optional, ParamSpec, Type, TypeVar
 import uuid
 
@@ -82,14 +83,18 @@ def b64decode(data: str | bytes, urlsafe: bool = False) -> str:
         return base64.b64decode(b).decode()
 
 
-def ensure_bytes(data: str | bytes) -> bytes:
+def ensure_bytes(data: str | bytes | dict) -> bytes:
     """
-    Use to reconcile a Union[str, bytes] parameter into bytes.
+    Use to reconcile some data into bytes.
     """
-    if isinstance(data, str):
-        return data.encode()
+    if isinstance(data, dict):
+        bytes = json.dumps(data).encode()
+    elif isinstance(data, str):
+        bytes = data.encode()
     else:
-        return data
+        bytes = data
+
+    return bytes
 
 
 def ensure_uuid(data: str | bytes | int | uuid.UUID | None) -> uuid.UUID:
@@ -117,6 +122,23 @@ def ensure_str_or_none(data: str | bytes | int | uuid.UUID | None) -> str | None
         return None
     else:
         return str(data)
+
+
+def ensure_str(data: str | bytes | int | uuid.UUID | dict) -> str:
+    if isinstance(data, str):
+        return data
+    elif isinstance(data, dict):
+        return json.dumps(data)
+    else:
+        return str(data)
+
+
+def compact_deterministic_json(data: dict) -> str:
+    return json.dumps(data, indent=None, separators=(",", ":"), sort_keys=True)
+
+
+def pretty_deterministic_json(data: dict) -> str:
+    return json.dumps(data, sort_keys=True)
 
 
 def nand(a: Any, b: Any) -> bool:

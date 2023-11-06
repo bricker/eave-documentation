@@ -1,8 +1,8 @@
 import {
-  DocumentType,
   GithubDocument,
+  GithubDocumentStatus,
+  GithubDocumentType,
   GithubDocumentValuesInput,
-  Status,
 } from "@eave-fyi/eave-stdlib-ts/src/core-api/models/github-documents.js";
 import { GithubRepo } from "@eave-fyi/eave-stdlib-ts/src/core-api/models/github-repos.js";
 import { Team } from "@eave-fyi/eave-stdlib-ts/src/core-api/models/team.js";
@@ -105,7 +105,7 @@ export class CoreAPIData {
       input: {
         query_params: {
           github_repo_id: eaveGithubRepo.id,
-          type: DocumentType.API_DOCUMENT,
+          type: GithubDocumentType.API_DOCUMENT,
         },
       },
       origin: appConfig.eaveOrigin,
@@ -148,8 +148,8 @@ export class CoreAPIData {
           id: eaveGithubRepo.id,
         },
         document: {
-          type: DocumentType.API_DOCUMENT,
-          status: Status.PROCESSING,
+          type: GithubDocumentType.API_DOCUMENT,
+          status: GithubDocumentStatus.PROCESSING,
           api_name: apiName,
           file_path: documentationFilePath,
           pull_request_number: null,

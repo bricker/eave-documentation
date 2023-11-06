@@ -1,3 +1,4 @@
+// @ts-check
 import { CssBaseline, ThemeProvider } from "@material-ui/core";
 import React from "react";
 import { CookiesProvider, withCookies } from "react-cookie";
@@ -10,6 +11,7 @@ import {
 } from "react-router-dom";
 
 import "../static/css/app.css";
+import AuthenticationPage from "./components/Pages/AuthenticationPage/index.jsx";
 import Dashboard from "./components/Pages/Dashboard/index.jsx";
 import HomePage from "./components/Pages/HomePage/index.jsx";
 import PrivacyPage from "./components/Pages/PrivacyPage/index.jsx";
@@ -25,6 +27,7 @@ const App = () => {
       <AppStoreProvider>
         <ThemeProvider theme={theme}>
           <CssBaseline />
+          {/* @ts-ignore */}
           <Helmet>
             <title>Eave - for your information.</title>
           </Helmet>
@@ -33,6 +36,14 @@ const App = () => {
             <Routes>
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
+              <Route
+                path="/signup"
+                element={<AuthenticationPage type="signup" />}
+              />
+              <Route
+                path="/login"
+                element={<AuthenticationPage type="login" />}
+              />
               <Route element={<PrivateRoutes />}>
                 <Route path="/dashboard" element={<Dashboard />} />
               </Route>

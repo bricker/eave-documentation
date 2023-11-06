@@ -15,7 +15,7 @@ export type GetGithubInstallationRequestBody = {
 };
 
 export type GetGithubInstallationResponseBody = {
-  team: Team;
+  team: Team | null;
   github_integration: GithubInstallation;
 };
 
