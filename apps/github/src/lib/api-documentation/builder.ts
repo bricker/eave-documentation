@@ -14,7 +14,7 @@ import { assertPresence } from "@eave-fyi/eave-stdlib-ts/src/util.js";
 import { assertIsBlob } from "../graphql-util.js";
 import { CoreAPIData } from "./core-api.js";
 import { GithubAPIData } from "./github-api.js";
-import { getImportSearchPaths, resolveImportLookupPaths } from "@eave-fyi/eave-stdlib-ts/src/parsing/es-parsing.js";
+import { getImportSearchPaths } from "@eave-fyi/eave-stdlib-ts/src/parsing/es-parsing.js";
 import { Blob } from "@octokit/graphql-schema";
 
 export class ExpressAPIDocumentBuilder {
@@ -72,7 +72,7 @@ export class ExpressAPIDocumentBuilder {
         path: treeEntry.path,
         contents: blob.text,
       });
-      if (file.isExpressRootFile()) {
+      if (file.expressAppIdentifier !== undefined) {
         // We found the file; Early-exit the loop
         apiInfo.rootFile = file;
         break;

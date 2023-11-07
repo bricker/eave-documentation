@@ -1,111 +1,188 @@
 import path from "node:path";
 import Parser from "tree-sitter";
 import { ExpressRoutingMethod, JsonObject } from "../types.js";
-import { dedent, titleize } from "../util.js";
+import { assertPresence, dedent, titleize } from "../util.js";
 import { ESCodeFile, ESNodeType } from "./es-parsing.js";
 import assert from "node:assert";
 
-type ExpressIdentifiers = {
-  app?: string;
-  router?: string;
-};
-
 export class ExpressCodeFile extends ESCodeFile {
-  private __memo_expressAppIdentifiers__?: ExpressIdentifiers;
-  private __memo_testExpressRootFile__?: boolean;
+  private __memo_expressAppIdentifier__?: string;
+  private __memo_expressRouterIdentifier__?: string;
+  private __memo_expressRouterMounts__?: string;
 
-  get isExpressRootFile(): boolean {
-    if (this.__memo_testExpressRootFile__ !== undefined) {
-      return this.__memo_testExpressRootFile__;
+  // /**
+  //  * Returns true if the text for a given node is setting up an Express route.
+  //  * Otherwise, returns false.
+  //  */
+  // testExpressRouteCall({
+  //   node,
+  // }: {
+  //   node: Parser.SyntaxNode;
+  // }): boolean {
+  //   const appIdentifier = this.expressAppIdentifier;
+  //   const routerIdentifier = this.expressRouterIdentifier;
+
+  //   node.
+
+  //   const children = this.getNodeChildMap({ node });
+  //   const expression = this.getExpression({ siblings: children });
+  //   if (expression) {
+  //     if (router) {
+  //       return expression === `${router}.use`;
+  //     }
+  //     if (expression.startsWith(`${app}.`)) {
+  //       for (const method of Object.values(ExpressRoutingMethod)) {
+  //         if (expression === `${app}.${method}`) {
+  //           return true;
+  //         }
+  //       }
+  //     }
+  //   }
+  //   return false;
+  // }
+
+  get expressRouterMounts(): string[] {
+    if (this.__memo_expressRouterMounts__ !== undefined) {
+      return this.__memo_expressRouterMounts__;
+    }
+
+
+    return this.__memo_expressRouterMounts__;
+  }
+
+  get expressRouteDefinitions(): string[] {
+  }
+
+  get expressRouterIdentifier(): string | undefined {
+    if (this.__memo_expressRouterIdentifier__ !== undefined) {
+      return this.__memo_expressRouterIdentifier__;
     }
 
     if (!this.language) {
       // Language isn't supported.
-      return false;
+      return undefined;
     }
 
+    const captureNames = {
+      varId: "varId",
+      functionId: "function.id",
+      propertyId: "member_expression.property.id"
+    };
+
+    /**
+     * Example code being queried:
+     *
+     * ```
+     * import { Router } from "express";
+     * const router = Router();
+     * ```
+     *
+     * Given the above code, this function will return "router", the name of the variable used to initialize the router.
+     *
+     * The function can also find routers defined as a member expression. For example:
+     *
+     * ```
+     * import express from "express";
+     * const router = express.Router();
+     * ```
+     *
+     * This function will again return "router" for that code.
+     */
     const query = new Parser.Query(this.grammar, dedent(`
-      (
-        call_expression
-          function: (identifier) @fid
+      (${ESNodeType.variable_declarator}
+        name: (${ESNodeType.identifier}) @${captureNames.varId}
+        value: (${ESNodeType.call_expression}
+          function: [
+            ((${ESNodeType.identifier}) @${captureNames.functionId})
+            (${ESNodeType.member_expression}
+              object: (${ESNodeType.identifier})
+              property: (${ESNodeType.property_identifier}) @${captureNames.propertyId}
+            )
+          ]
+        )
       )
     `).trim());
 
     const matches = query.matches(this.rootNode.innerNode);
 
-    // Find a `call_expression` with function identifier "express".
-    const expressCallMatch = matches?.some((qmatch: Parser.QueryMatch) => {
-      return qmatch.captures.some((cap: Parser.QueryCapture) => {
-        return cap.node.text === "express";
-      });
+    // TODO: These are common names for these imports, but renamed imports aren't handled. eg: `import { Router as ExpressRouter } from "express"` is not handled.
+    const routerCallMatch = matches?.find((qmatch: Parser.QueryMatch) => {
+      const functionIdCapture = qmatch.captures.find((c) => c.name === captureNames.functionId);
+      const propertyIdCapture = qmatch.captures.find((c) => c.name === captureNames.propertyId);
+      return functionIdCapture?.node.text === "Router" || propertyIdCapture?.node.text === "Router";
     });
 
-    if (expressCallMatch) {
-      // We think this file initializes an Express server.
-      this.__memo_testExpressRootFile__ = true;
-    } else {
-      // We didn't see an Express server initialized in this file.
-      this.__memo_testExpressRootFile__ = false;
+    if (!routerCallMatch) {
+      return undefined;
     }
 
-    return this.__memo_testExpressRootFile__;
-  }
+    const variableIdCapture = routerCallMatch.captures.find((c) => c.name === captureNames.varId);
+    assertPresence(variableIdCapture);
 
-  /**
-   * Returns true if the text for a given node is setting up an Express route.
-   * Otherwise, returns false.
-   */
-  testExpressRouteCall({
-    node,
-    app,
-    router,
-  }: {
-    node: Parser.SyntaxNode;
-    app: string;
-    router: string;
-  }): boolean {
-    const children = this.getNodeChildMap({ node });
-    const expression = this.getExpression({ siblings: children });
-    if (expression) {
-      if (router) {
-        return expression === `${router}.use`;
-      }
-      if (expression.startsWith(`${app}.`)) {
-        for (const method of Object.values(ExpressRoutingMethod)) {
-          if (expression === `${app}.${method}`) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
+    this.__memo_expressRouterIdentifier__ = variableIdCapture.node.text;
+    return this.__memo_expressRouterIdentifier__;
   }
 
   /**
    * Searches a tree for relevant Express calls and returns the variables that
-   * are used to declare the root Express app and the Express Router if needed.
+   * are used to declare the root Express app.
+   * Example:
+   *    const app = express();
+   * In this code, the identifier "app" would be returned from this function.
    */
-  get expressAppIdentifiers(): ExpressIdentifiers {
-    if (this.__memo_expressAppIdentifiers__ !== undefined) {
-      return this.__memo_expressAppIdentifiers__;
+  get expressAppIdentifier(): string | undefined {
+    if (this.__memo_expressAppIdentifier__ !== undefined) {
+      return this.__memo_expressAppIdentifier__;
     }
 
-    const variables = this.variables();
-    const identifiers: ExpressIdentifiers = {};
-
-    for (const [identifier, expressionNode] of variables) {
-      const children = this.getNodeChildMap({ node: expressionNode });
-      const expression = this.getExpression({ siblings: children });
-      if (expression === "express") {
-        identifiers.app = identifier;
-        continue;
-      }
-      if (expression === "express.Router" || expression === "Router") {
-        identifiers.router = identifier;
-      }
+    if (!this.language) {
+      // Language isn't supported.
+      return undefined;
     }
-    this.__memo_expressAppIdentifiers__ = identifiers;
-    return this.__memo_expressAppIdentifiers__;
+
+    const captureNames = {
+      varId: "varId",
+      functionId: "functionId"
+    };
+
+    /**
+     * Example code being queried:
+     *
+     * ```
+     * import express from "express";
+     * const app = express();
+     * app.listen();
+     * ```
+     *
+     * Given the above code, this function will return "app", the name of the variable used to initialize the express app.
+     */
+    const query = new Parser.Query(this.grammar, dedent(`
+      (${ESNodeType.variable_declarator}
+        name: (${ESNodeType.identifier}) @${captureNames.varId}
+        value: (${ESNodeType.call_expression}
+          function: (${ESNodeType.identifier}) @${captureNames.functionId}
+        )
+      )
+    `).trim());
+
+    const matches = query.matches(this.rootNode.innerNode);
+
+    // Find a `call_expression` with function identifier "express" or "Express"
+    // These are common names for these imports, but we'll miss non-standard import names like `import ApiFramework from "express"`
+    const expressCallMatch = matches?.find((qmatch: Parser.QueryMatch) => {
+      const functionIdCapture = qmatch.captures.find((c) => c.name === captureNames.functionId);
+      return functionIdCapture?.node.text.toLowerCase() === "express";
+    });
+
+    if (!expressCallMatch) {
+      return undefined;
+    }
+
+    const variableIdCapture = expressCallMatch.captures.find((c) => c.name === captureNames.varId);
+    assertPresence(variableIdCapture);
+
+    this.__memo_expressAppIdentifier__ = variableIdCapture.node.text;
+    return this.__memo_expressAppIdentifier__;
   }
 }
 

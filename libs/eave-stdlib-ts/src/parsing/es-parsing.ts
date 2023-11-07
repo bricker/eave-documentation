@@ -10,6 +10,7 @@ import { ProgrammingLanguage } from "../programming-langs/language-mapping.js";
 export enum ESNodeType {
   variable_declarator = "variable_declarator",
   identifier = "identifier",
+  property_identifier = "property_identifier",
   call_expression = "call_expression",
   import_statement = "import_statement",
   import_clause = "import_clause",
@@ -20,6 +21,7 @@ export enum ESNodeType {
   variable_declaration = "variable_declaration",
   export_statement = "export_statement",
   member_expression = "member_expression",
+  subscript_expression = "subscript_expression",
   string = "string",
   arguments = "arguments",
 }
@@ -206,6 +208,7 @@ export class ESNode {
     }
     return identifiers;
   }
+
 }
 
 export class ESCodeFile extends CodeFile {
