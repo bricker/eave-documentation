@@ -46,6 +46,22 @@ export class ExpressCodeFile extends ESCodeFile {
       return this.__memo_expressRouterMounts__;
     }
 
+    const appIdentifier = this.expressAppIdentifier;
+
+    const query = new Parser.Query(this.grammar, dedent(`
+      (${ESNodeType.variable_declarator}
+        name: (${ESNodeType.identifier}) @${captureNames.varId}
+        value: (${ESNodeType.call_expression}
+          function: [
+            ((${ESNodeType.identifier}) @${captureNames.functionId})
+            (${ESNodeType.member_expression}
+              object: (${ESNodeType.identifier})
+              property: (${ESNodeType.property_identifier}) @${captureNames.propertyId}
+            )
+          ]
+        )
+      )
+    `).trim());
 
     return this.__memo_expressRouterMounts__;
   }
@@ -53,7 +69,7 @@ export class ExpressCodeFile extends ESCodeFile {
   get expressRouteDefinitions(): string[] {
   }
 
-  get expressRouterIdentifier(): string | undefined {
+  get expressRootRouterIdentifier(): string | undefined {
     if (this.__memo_expressRouterIdentifier__ !== undefined) {
       return this.__memo_expressRouterIdentifier__;
     }
