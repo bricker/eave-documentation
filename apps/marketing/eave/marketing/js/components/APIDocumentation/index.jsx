@@ -1,10 +1,11 @@
 // @ts-check
-import { CircularProgress, Link, Typography } from "@material-ui/core";
+import { CircularProgress, Typography } from "@material-ui/core";
 import { makeStyles } from "@material-ui/styles";
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import useTeam from "../../hooks/useTeam";
 import * as Types from "../../types.js"; // eslint-disable-line no-unused-vars
 import { mapReposById } from "../../util/repo-util.js";
+import { AppContext } from "../../context/Provider";
 
 const makeClasses = makeStyles((/** @type {Types.Theme} */ theme) => ({
   container: {
@@ -72,23 +73,16 @@ const makeClasses = makeStyles((/** @type {Types.Theme} */ theme) => ({
   compactDocName: {
     fontWeight: 700,
   },
-  statusText: {
-    fontSize: 16,
-    maxWidth: 700,
-  },
-  statusMailer: {
-    fontWeight: "bold",
-  },
 }));
 
 /**
- * Formats the status of a Github document based on its current state.
+ * Formats the status of a Github document based on its current state and associated Github repository.
  * If the document is still being processed, it returns a simple "Processing" string.
- * It also generates a link to the associated pull request in the Github repository if applicable.
+ * Otherwise, it generates a link to the associated pull request in the Github repository if applicable.
  *
- * @param {Types.GithubDocument} doc - The Github document to format.
+ * @param {Types.GithubDocument} doc - The Github document whose status is to be formatted.
  * @param {{[key: string] : Types.GithubRepo}} repoMap - A map of Github repositories, keyed by their IDs.
- * @returns {JSX.Element} The formatted status as a JSX element, and, if applicable, a link to the associated pull request.
+ * @returns {JSX.Element} A JSX element containing the formatted status and, if applicable, a link to the associated pull request.
  */
 function formatStatus(
   /** @type {Types.GithubDocument} */ doc,
@@ -164,56 +158,23 @@ function formatLastUpdated(doc) {
   });
 }
 
-function statusMessage({
-  /** @type {string} */ body,
-  /** @type {string | undefined} */ mailto,
+function renderContent(/** @type {{ classes: object, networkState: Types.DashboardNetworkState, team: Types.DashboardTeam, compact: boolean }} */ {
   classes,
-}) {
-  return (
-    <Typography className={classes.statusText}>
-      {body}{" "}
-      {mailto !== undefined && (
-        <Link className={classes.statusMailer} href="mailto:info@eave.fyi">
-          {mailto}
-        </Link>
-      )}
-    </Typography>
-  );
-}
-
-/**
- * Renders the content of the dashboard based on the state of API documentation fetching.
- * Displays error message if unable to fetch API documentation.
- * Shows a loading spinner while fetching API documentation.
- * If API documentation is empty, informs the user that Eave is searching for Express APIs.
- * Once the API documentation is fetched, it displays the documentation in a table or compact view based on the 'compact' parameter.
- * It also handles user interactions such as row clicks and mouse overs.
- *
- * @param {Object} classes - CSS classes for styling the rendered content.
- * @param {Types.DashboardTeam} team - The team object containing information about API documentation fetching status and results.
- * @param {boolean} compact - Determines if the rendered view should be in compact mode.
- */
-function renderContent(
-  classes,
-  /** @type {Types.DashboardTeam} */ team,
+  networkState,
+  team,
   compact,
-) {
+}) {
+  const {
+    apiDocs,
+    repos,
+  } = team;
+
   const {
     apiDocsErroring,
     apiDocsLoading,
     apiDocsFetchCount,
-    apiDocs,
-    apiDocsJobStatusLoading,
-    apiDocsJobs,
-    repos,
     apiDocsRequestHasSucceededAtLeastOnce,
-  } = team;
-
-  const loadingWheel = (
-    <div className={classes.loader}>
-      <CircularProgress color="inherit" />
-    </div>
-  );
+  } = networkState;
 
   /**
    * This check:
@@ -223,56 +184,30 @@ function renderContent(
   if (apiDocsFetchCount === 0) {
     if (apiDocsErroring && !apiDocsRequestHasSucceededAtLeastOnce) {
       return (
-        <Typography color="error" className={classes.statusText}>
+        <Typography color="error" variant="h6">
           ERROR: Unable to fetch API documentation.
         </Typography>
       );
     }
     if (apiDocsLoading) {
-      return loadingWheel;
+      return (
+        <div className={classes.loader}>
+          <CircularProgress color="inherit" />
+        </div>
+      );
     }
   }
 
-  // no docs created in DB yet; check job status to find why
-  if (apiDocs.length === 0) {
-    if (apiDocsJobStatusLoading) {
-      return loadingWheel;
-    }
-    const processingMessage = statusMessage({
-      body: "Eave is currently searching for Express APIs within your repositories. This may take some time. Please check back for any documentation created.",
-      mailto: undefined,
-      classes,
-    });
-
-    if (!apiDocsJobs || apiDocsJobs.every((job) => job.state === "running")) {
-      return processingMessage;
-    }
-    if (apiDocsJobs.every((job) => job.last_result === "error")) {
-      return statusMessage({
-        body: "Oops, looks like something went wrong, and we're actively investigating the issue. Please check back again shortly or feel free to",
-        mailto: "reach out to us at info@eave.fyi",
-        classes,
-      });
-    }
-    if (
-      apiDocsJobs.every(
-        (job) =>
-          job.last_result === "no_api_found" || job.last_result === "error",
-      )
-    ) {
-      return statusMessage({
-        body: `We weren't able to detect any Express APIs to document at this time.
-          We're working on expanding support for additional languages and
-          frameworks in the near future. Questions, comments, or requests?`,
-        mailto: "Send us a message at info@eave.fyi",
-        classes,
-      });
-    }
-
-    // fallback
-    return processingMessage;
+  if (!apiDocs || apiDocs.length === 0) {
+    return (
+      <Typography color="inherit" variant="h6">
+        Eave is currently searching for Express APIs within your repositories.
+        This may take some time. Please check back for any documentation
+        created.
+      </Typography>
+    );
   }
-  const repoMap = mapReposById(repos);
+  const repoMap = repos ? mapReposById(repos) : {};
   const handleRowClick = (e, /** @type {Types.GithubDocument} */ doc) => {
     const filePath = doc.file_path;
     const isProcessing = doc.status === "processing";
@@ -347,13 +282,15 @@ function renderContent(
 }
 
 const APIDocumentation = () => {
-  const { team, getTeamAPIDocs, getTeamApiDocsJobsStatuses } = useTeam();
+    /** @type {import("../../context/Provider.js").AppContextProps} */
+  const { dashboardNetworkStateCtx: [networkState] } = useContext(AppContext);
+
+  const { team, getTeamAPIDocs } = useTeam();
   const [compact, setCompact] = useState(window.innerWidth < 900);
   const classes = makeClasses();
 
   useEffect(() => {
     getTeamAPIDocs();
-    getTeamApiDocsJobsStatuses();
     const interval = setInterval(getTeamAPIDocs, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -369,7 +306,7 @@ const APIDocumentation = () => {
       <Typography className={classes.title} variant="h2">
         API Documentation
       </Typography>
-      {renderContent(classes, team, compact)}
+      {team && renderContent({ classes, team, networkState, compact })}
     </section>
   );
 };

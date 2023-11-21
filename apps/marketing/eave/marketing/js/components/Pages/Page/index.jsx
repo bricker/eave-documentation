@@ -22,7 +22,7 @@ const makeClasses = makeStyles((theme) => ({
 }));
 
 const Page = ({
-  children = undefined,
+  children,
   simpleHeader = false,
   footer = true,
   compactHeader = false,

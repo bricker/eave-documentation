@@ -19,7 +19,7 @@ const makeClasses = makeStyles((theme) => ({
   },
 }));
 
-const PageSection = ({
+const PageSection = (/** @type {{ children: any, alternateBackground?: string, sectionClassName?: string, wrapperClassName?: string, id?: string }} */ {
   children,
   alternateBackground,
   sectionClassName,

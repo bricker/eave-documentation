@@ -286,7 +286,7 @@ function renderDescription(type) {
 }
 
 const GitHubFeatureModal = (
-  /**@type {{ onClose: () => void, onUpdate: (p: Types.FeatureStateParams) => void, open: boolean, feature: string, type: string }}*/ {
+  /** @type {{ onClose: () => void, onUpdate: (p: Types.FeatureStateParams) => void, open: boolean, feature: string, type: string }}*/ {
     onClose,
     onUpdate,
     open,
@@ -298,10 +298,12 @@ const GitHubFeatureModal = (
   const [_, setCookie] = useCookies([FEATURE_MODAL.ID]);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [optionsExpanded, setOptionsExpanded] = useState(false);
+
+  /** @type {[string | null, React.Dispatch<React.SetStateAction<string | null>>]} */
   const [selectedRepoError, setSelectedRepoError] = useState(null);
   const { team } = useTeam();
 
-  const github = team.integrations?.github_integration;
+  const github = team?.integrations?.github_integration;
 
   /** @type {Types.GlobalEave} */
   // @ts-ignore
@@ -316,12 +318,12 @@ const GitHubFeatureModal = (
     !github && classes.disabledText,
   );
 
-  const teamRepoIds = team.repos.map((repo) => repo.id);
+  const teamRepoIds = team?.repos?.map((repo) => repo.id) || [];
   const enabledRepos =
-    team.repos?.filter((repo) => repo[feature] === FEATURE_STATES.ENABLED) ||
+    team?.repos?.filter((repo) => repo[feature] === FEATURE_STATES.ENABLED) ||
     [];
   const notEnabledRepos =
-    team.repos?.filter((repo) => repo[feature] !== FEATURE_STATES.ENABLED) ||
+    team?.repos?.filter((repo) => repo[feature] !== FEATURE_STATES.ENABLED) ||
     [];
   const sortedRepos = [...enabledRepos, ...notEnabledRepos];
 
@@ -359,7 +361,7 @@ const GitHubFeatureModal = (
       enabledRepoIds: selectedRepoIds,
       feature,
     });
-  }, [team.id, teamRepoIds, selectedRepoIds]);
+  }, [team?.id, teamRepoIds, selectedRepoIds]);
 
   const handleDisable = useCallback(() => {
     onUpdate({
@@ -367,7 +369,7 @@ const GitHubFeatureModal = (
       enabledRepoIds: [],
       feature,
     });
-  }, [team.id, teamRepoIds]);
+  }, [team?.id, teamRepoIds]);
 
   const setModalCookie = useCallback(() => {
     setCookie(FEATURE_MODAL.ID, type);

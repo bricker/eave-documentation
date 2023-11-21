@@ -1,6 +1,6 @@
 import React from "react";
 
-function ConfluenceIcon({ className }) {
+function ConfluenceIcon({ className = undefined }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

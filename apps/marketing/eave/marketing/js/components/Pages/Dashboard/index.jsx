@@ -1,5 +1,5 @@
 // @ts-check
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { useCookies } from "react-cookie";
 import { useSearchParams } from "react-router-dom";
 import useTeam from "../../../hooks/useTeam.js";
@@ -15,26 +15,35 @@ import Page from "../Page/index.jsx";
 import UninstalledGithubAppDash from "./uninstalled-app.jsx";
 
 import { FEATURE_MODAL, FEATURE_STATE_PROPERTY } from "../../../constants.js";
+import { AppContext } from "../../../context/Provider.js";
 
 const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [cookies, _, removeCookie] = useCookies([FEATURE_MODAL.ID]);
   const { team, getTeam, getTeamRepos, updateTeamFeatureState } = useTeam();
+  const { dashboardNetworkStateCtx: [networkState] } = useContext(AppContext);
+
   const [inlineDocsModalIsOpen, setInlineDocsModalIsOpen] = useState(false);
   const [apiDocsModalIsOpen, setAPIDocsModalIsOpen] = useState(false);
 
-  const showFeatureSettings = team.inlineCodeDocsEnabled || team.apiDocsEnabled;
-  const showAPIDocs = team.apiDocsEnabled;
-  const githubAppInstalled = !!team.integrations?.github_integration;
-
-  const isLoading = team.teamIsLoading || team.reposAreLoading;
-
-  const isErroring = team.teamIsErroring;
-
+  const isLoading = networkState.teamIsLoading || networkState.reposAreLoading;
+  const isErroring = networkState.teamIsErroring;
   const dashboardRequestsSucceededAtLeastOnce =
-    team.teamRequestHasSucceededAtLeastOnce &&
-    team.apiDocsRequestHasSucceededAtLeastOnce &&
-    team.reposRequestHasSucceededAtLeastOnce;
+    networkState.teamRequestHasSucceededAtLeastOnce &&
+    networkState.apiDocsRequestHasSucceededAtLeastOnce &&
+    networkState.reposRequestHasSucceededAtLeastOnce;
+
+  if (isErroring && !dashboardRequestsSucceededAtLeastOnce) {
+    return <ErrorPage page="dashboard" />;
+  }
+
+  if (isLoading && !dashboardRequestsSucceededAtLeastOnce) {
+    return <LoadingPage />;
+  }
+
+  const showFeatureSettings = team?.inlineCodeDocsEnabled || team?.apiDocsEnabled;
+  const showAPIDocs = team?.apiDocsEnabled;
+  const githubAppInstalled = !!team?.integrations?.github_integration;
 
   const closeModal = () => {
     removeCookie(FEATURE_MODAL.ID);
@@ -109,13 +118,6 @@ const Dashboard = () => {
         break;
     }
   }, [searchParams]);
-
-  if (isErroring && !dashboardRequestsSucceededAtLeastOnce) {
-    return <ErrorPage page="dashboard" />;
-  }
-  if (isLoading && !dashboardRequestsSucceededAtLeastOnce) {
-    return <LoadingPage />;
-  }
 
   if (!githubAppInstalled) {
     return (

@@ -1,3 +1,4 @@
+// @ts-check
 import { Button as MaterialButton } from "@material-ui/core";
 import { makeStyles } from "@material-ui/styles";
 import classNames from "classnames";
@@ -21,13 +22,13 @@ const makeClasses = makeStyles(() => ({
   },
 }));
 
-const Button = ({
-  color = "primary",
-  variant = "contained",
+const Button = (/** @type {{ children: any, className: string, to?: string, target?: string, color?: import("@material-ui/core").PropTypes.Color, variant?: "text" | "outlined" | "contained", [key:string]: any }} */{
   children,
   className,
-  target = undefined,
-  to = undefined,
+  to,
+  target,
+  color = "primary",
+  variant = "contained",
   ...rest
 }) => {
   const classes = makeClasses();

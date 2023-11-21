@@ -13,6 +13,7 @@ import {
 import "../static/css/app.css";
 import AuthenticationPage from "./components/Pages/AuthenticationPage/index.jsx";
 import Dashboard from "./components/Pages/Dashboard/index.jsx";
+import V1Onboarding from "./components/Pages/V1Onboarding/index.jsx";
 import HomePage from "./components/Pages/HomePage/index.jsx";
 import PrivacyPage from "./components/Pages/PrivacyPage/index.jsx";
 import TermsPage from "./components/Pages/TermsPage/index.jsx";
@@ -46,6 +47,7 @@ const App = () => {
               />
               <Route element={<PrivateRoutes />}>
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/v1-onboarding" element={<V1Onboarding />} />
               </Route>
               <Route path="/" element={<HomePage />} />
               <Route path="*" element={<Navigate to="/" />} />

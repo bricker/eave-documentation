@@ -2,20 +2,20 @@ from functools import wraps
 from http.client import UNAUTHORIZED
 import json
 import time
-from typing import Any, Awaitable, Callable
+from typing import Any, Awaitable, Callable, Literal
 
 from aiohttp import ClientResponseError
 from eave.stdlib.auth_cookies import AuthCookies, delete_auth_cookies, get_auth_cookies, set_auth_cookies
+from eave.stdlib.confluence_api.operations import GetAvailableSpacesRequest
 from eave.stdlib.cookies import delete_http_cookie, set_http_cookie
-from eave.stdlib.core_api.models.api_documentation_jobs import ApiDocumentationJobListInput
 
 from eave.stdlib.core_api.models.github_repos import GithubRepoUpdateInput
+from eave.stdlib.core_api.models.team import ConfluenceDestinationInput
 from eave.stdlib.core_api.operations import BaseResponseBody
 import eave.stdlib.core_api.operations.account as account
 import eave.stdlib.core_api.operations.team as team
 import eave.stdlib.core_api.operations.github_repos as github_repos
 import eave.stdlib.core_api.operations.github_documents as github_documents
-import eave.stdlib.core_api.operations.api_documentation_jobs as api_documentation_jobs
 from eave.stdlib.core_api.models.github_documents import GithubDocument, GithubDocumentsQueryInput, GithubDocumentStatus
 from eave.stdlib.github_api.operations.query_repos import QueryGithubRepos
 from eave.stdlib.headers import MIME_TYPE_JSON
@@ -163,7 +163,6 @@ async def get_team_repos() -> Response:
 @_auth_handler
 async def update_team_repos() -> Response:
     auth_cookies = _get_auth_cookies_or_exception()
-
     body = request.get_json()
     repos: list[GithubRepoUpdateInput] = body["repos"]
 
@@ -173,25 +172,6 @@ async def update_team_repos() -> Response:
         account_id=ensure_uuid(auth_cookies.account_id),
         access_token=unwrap(auth_cookies.access_token),
         input=github_repos.UpdateGithubReposRequest.RequestBody(repos=repos),
-    )
-
-    return _make_response(eave_response)
-
-
-@app.route("/dashboard/team/api-docs-jobs", methods=["POST"])
-@_auth_handler
-async def get_team_docs_jobs() -> Response:
-    auth_cookies = _get_auth_cookies_or_exception()
-
-    body = request.get_json()
-    jobs = [ApiDocumentationJobListInput(id=job["id"]) for job in body["jobs"]] if "jobs" in body else None
-
-    eave_response = await api_documentation_jobs.GetApiDocumentationJobsOperation.perform(
-        origin=app_config.eave_origin,
-        team_id=unwrap(auth_cookies.team_id),
-        account_id=ensure_uuid(auth_cookies.account_id),
-        access_token=unwrap(auth_cookies.access_token),
-        input=api_documentation_jobs.GetApiDocumentationJobsOperation.RequestBody(jobs=jobs),
     )
 
     return _make_response(eave_response)
@@ -219,6 +199,38 @@ async def get_team_documents() -> Response:
     eave_response.documents.sort(key=_document_rank)
     return _make_response(eave_response)
 
+@app.route("/dashboard/team/confluence-spaces/list", methods=["POST"])
+@_auth_handler
+async def list_available_confluence_spaces() -> Response:
+    await _validate_auth_cookies_or_exception()
+    auth_cookies = _get_auth_cookies_or_exception()
+
+    eave_response = await GetAvailableSpacesRequest.perform(
+        origin=app_config.eave_origin,
+        team_id=unwrap(auth_cookies.team_id),
+    )
+
+    return _make_response(eave_response)
+
+@app.route("/dashboard/team/confluence-spaces/set", methods=["POST"])
+@_auth_handler
+async def set_team_confluence_space() -> Response:
+    await _validate_auth_cookies_or_exception()
+    auth_cookies = _get_auth_cookies_or_exception()
+
+    input = team.UpsertConfluenceDestinationAuthedRequest.RequestBody(
+        confluence_destination=ConfluenceDestinationInput(**request.get_json())
+    )
+
+    eave_response = await team.UpsertConfluenceDestinationAuthedRequest.perform(
+        origin=app_config.eave_origin,
+        account_id=unwrap(auth_cookies.account_id),
+        team_id=unwrap(auth_cookies.team_id),
+        access_token=unwrap(auth_cookies.access_token),
+        input=input,
+    )
+
+    return _make_response(eave_response)
 
 @app.route("/dashboard/logout", methods=["GET"])
 async def logout() -> BaseResponse:
@@ -264,6 +276,24 @@ def _get_auth_cookies_or_exception() -> AuthCookies:
         raise werkzeug.exceptions.Unauthorized()
 
     return auth_cookies
+
+async def _validate_auth_cookies_or_exception() -> Literal[True]:
+    # This is just to validate that the logged-in account matches the given team_id.
+    # Use with endpoints that don't do their own access token validation (eg Eave Confluence API)
+    auth_cookies = _get_auth_cookies_or_exception()
+
+    authed_account_response = await account.GetAuthenticatedAccount.perform(
+        origin=app_config.eave_origin,
+        team_id=ensure_uuid(auth_cookies.team_id),
+        account_id=ensure_uuid(auth_cookies.account_id),
+        access_token=unwrap(auth_cookies.access_token),
+    )
+
+    assert authed_account_response._raw_response
+    if not authed_account_response._raw_response.ok:
+        raise Exception("Invalid auth.")
+
+    return True
 
 
 def _make_response(eave_response: BaseResponseBody) -> Response:
