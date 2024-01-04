@@ -31,10 +31,10 @@ function run-pg-shell() {
 
 	local socketdir=${XDG_RUNTIME_DIR}/.cloudsqlproxy
 	local connectionName
-	connectionName=$(gcloud --format json sql instances list --filter="state=RUNNABLE" | jq -r .[0].connectionName)
+	connectionName=$(gcloud --project "$GOOGLE_CLOUD_PROJECT" --format json sql instances list --filter="state=RUNNABLE" | jq -r .[0].connectionName)
 
 	if test -z "$username"; then
-		username=$(gcloud --format json info | jq -r .config.account)
+		username=$(gcloud --project "$GOOGLE_CLOUD_PROJECT" --format json info | jq -r .config.account)
 	fi
 
 	if test -z "$connectionName" || test -z "$username"; then
