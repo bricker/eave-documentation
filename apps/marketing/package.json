@@ -10,7 +10,7 @@
     "react-cookie": "^4.1.1",
     "react-dom": "^18.2.0",
     "react-helmet": "^6.1.0",
-    "react-router-dom": "^6.6.1",
+    "react-router-dom": "^6.30.3",
     "uuid": "^9.0.0"
   },
   "devDependencies": {
